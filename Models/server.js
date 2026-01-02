@@ -111,6 +111,24 @@ app.post('/api/login', async (req, res) => {
         // Let's stick to User table for the main auth as per standard flow.
 
         if (user) {
+            // Check if Customer profile exists for 'customer' role
+            if (user.user_type === 'customer') {
+                const customerProfile = await Customer.findOne({ uid: user.uid });
+                if (!customerProfile) {
+                    // Create missing Customer profile
+                    console.log("Creating missing Customer profile for:", user.email);
+                    const newCustomer = new Customer({
+                        cid: Math.floor(Math.random() * 100000),
+                        uid: user.uid,
+                        name: `${user.f_name} ${user.l_name}`,
+                        address: user.address,
+                        email: user.email,
+                        phone: "0000000000" // Placeholder or try fetch from User if schema supports
+                    });
+                    await newCustomer.save();
+                }
+            }
+
             res.json({
                 success: true,
                 user: {

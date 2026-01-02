@@ -89,10 +89,17 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <Settings className="sidebar-nav-icon" />
           {!collapsed && <span className="sidebar-nav-label">Settings</span>}
         </Link>
-        <Link to="/login" className="sidebar-nav-item logout">
+        <button
+          onClick={() => {
+            localStorage.clear();
+            window.location.href = '/login';
+          }}
+          className="sidebar-nav-item logout"
+          style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+        >
           <LogOut className="sidebar-nav-icon" />
           {!collapsed && <span className="sidebar-nav-label">Logout</span>}
-        </Link>
+        </button>
       </div>
 
       {/* Collapse button */}

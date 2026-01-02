@@ -73,7 +73,16 @@ export function Header({ title, subtitle }: HeaderProps) {
               <button className="dropdown-item">Profile</button>
               <button className="dropdown-item">Settings</button>
               <div className="dropdown-divider" />
-              <button className="dropdown-item" style={{ color: 'var(--color-destructive)' }}>Logout</button>
+              <button
+                className="dropdown-item"
+                style={{ color: 'var(--color-destructive)' }}
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.href = '/login';
+                }}
+              >
+                Logout
+              </button>
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { CalendarDays, CreditCard, MessageSquare, Plus, Clock, CheckCircle, XCircle, ShoppingBag, BadgeIndianRupee, Star } from 'lucide-react';
+import { CalendarDays, CreditCard, MessageSquare, Plus, Clock, CheckCircle, XCircle, ShoppingBag, BadgeIndianRupee, Star, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import '../styles/components.css';
 import '../styles/pages.css';
@@ -25,6 +25,7 @@ interface Booking {
 
 export default function CustomerDashboard() {
     const [activeTab, setActiveTab] = useState<'services' | 'bookings' | 'payments' | 'feedback'>('services');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Modal State
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -206,99 +207,122 @@ export default function CustomerDashboard() {
 
     // --- RENDERERS ---
 
-    const renderServices = () => (
-        <div style={{ paddingBottom: '80px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                    <h3 className="card-title">Available Services</h3>
-                    <p className="card-description">Browse and book premium car services</p>
+    const renderServices = () => {
+        const filteredServices = services.filter(service =>
+            service.service_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            service.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        return (
+            <div style={{ paddingBottom: '80px' }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div>
+                            <h3 className="card-title">Available Services</h3>
+                            <p className="card-description">Browse and book premium car services</p>
+                        </div>
+                        {services.length === 0 && (
+                            <button onClick={handleSeedServices} className="btn btn-outline btn-sm">Load Demo Services</button>
+                        )}
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="actions-bar" style={{ marginBottom: '0' }}>
+                        <div className="search-wrapper" style={{ maxWidth: '100%', width: '100%' }}>
+                            <Search />
+                            <input
+                                type="text"
+                                placeholder="Search for services..."
+                                className="input"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
                 </div>
-                {services.length === 0 && (
-                    <button onClick={handleSeedServices} className="btn btn-outline btn-sm">Load Demo Services</button>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '1.5rem'
+                }}>
+                    {filteredServices.map(service => {
+                        const isInCart = cart.some(s => s.sid === service.sid);
+                        return (
+                            <div key={service.sid} className="card service-hover-card" style={{
+                                padding: '1.5rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                border: isInCart ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                transform: isInCart ? 'scale(1.02)' : 'none',
+                                transition: 'all 0.2s'
+                            }}>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '0.5rem',
+                                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                            color: 'var(--color-primary)'
+                                        }}>
+                                            <ShoppingBag size={24} />
+                                        </div>
+                                        <span className="badge badge-default" style={{ fontSize: '0.875rem' }}>{service.duration}</span>
+                                    </div>
+                                    <h4 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>{service.service_name}</h4>
+                                    <p style={{ color: 'var(--color-muted-foreground)', fontSize: '0.9rem', marginBottom: '1rem', lineHeight: '1.5' }}>
+                                        {service.description}
+                                    </p>
+                                </div>
+
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>₹{service.price}</span>
+                                    <button
+                                        onClick={() => toggleCart(service)}
+                                        className={`btn ${isInCart ? 'btn-destructive' : 'btn-primary'}`}
+                                    >
+                                        {isInCart ? 'Remove' : 'Add to Cart'}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                {services.length === 0 && <p className="text-center" style={{ color: 'var(--color-muted-foreground)', marginTop: '3rem' }}>No services available at the moment.</p>}
+
+                {/* Sticky Cart Footer - Hide when Modal is Open */}
+                {cart.length > 0 && !showBookingModal && (
+                    <div style={{
+                        position: 'fixed',
+                        bottom: '2rem',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: 'white',
+                        padding: '1rem 2rem',
+                        borderRadius: '50px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2rem',
+                        zIndex: 100,
+                        border: '1px solid var(--color-border)',
+                        width: '90%',
+                        maxWidth: '600px',
+                        justifyContent: 'space-between'
+                    }}>
+                        <div>
+                            <p style={{ fontWeight: 600, fontSize: '1.1rem' }}>{cart.length} Services Selected</p>
+                            <p style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Total: ₹{cart.reduce((sum, s) => sum + s.price, 0)}</p>
+                        </div>
+                        <button onClick={openCheckoutModal} className="btn btn-primary" style={{ padding: '0.75rem 2rem', borderRadius: '30px' }}>
+                            Proceed to Book
+                        </button>
+                    </div>
                 )}
             </div>
-
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '1.5rem'
-            }}>
-                {services.map(service => {
-                    const isInCart = cart.some(s => s.sid === service.sid);
-                    return (
-                        <div key={service.sid} className="card service-hover-card" style={{
-                            padding: '1.5rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            border: isInCart ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                            transform: isInCart ? 'scale(1.02)' : 'none',
-                            transition: 'all 0.2s'
-                        }}>
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                    <div style={{
-                                        padding: '0.75rem',
-                                        borderRadius: '0.5rem',
-                                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                        color: 'var(--color-primary)'
-                                    }}>
-                                        <ShoppingBag size={24} />
-                                    </div>
-                                    <span className="badge badge-default" style={{ fontSize: '0.875rem' }}>{service.duration}</span>
-                                </div>
-                                <h4 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>{service.service_name}</h4>
-                                <p style={{ color: 'var(--color-muted-foreground)', fontSize: '0.9rem', marginBottom: '1rem', lineHeight: '1.5' }}>
-                                    {service.description}
-                                </p>
-                            </div>
-
-                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>₹{service.price}</span>
-                                <button
-                                    onClick={() => toggleCart(service)}
-                                    className={`btn ${isInCart ? 'btn-destructive' : 'btn-primary'}`}
-                                >
-                                    {isInCart ? 'Remove' : 'Add to Cart'}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            {services.length === 0 && <p className="text-center" style={{ color: 'var(--color-muted-foreground)', marginTop: '3rem' }}>No services available at the moment.</p>}
-
-            {/* Sticky Cart Footer - Hide when Modal is Open */}
-            {cart.length > 0 && !showBookingModal && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: '2rem',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'white',
-                    padding: '1rem 2rem',
-                    borderRadius: '50px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '2rem',
-                    zIndex: 100,
-                    border: '1px solid var(--color-border)',
-                    width: '90%',
-                    maxWidth: '600px',
-                    justifyContent: 'space-between'
-                }}>
-                    <div>
-                        <p style={{ fontWeight: 600, fontSize: '1.1rem' }}>{cart.length} Services Selected</p>
-                        <p style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Total: ₹{cart.reduce((sum, s) => sum + s.price, 0)}</p>
-                    </div>
-                    <button onClick={openCheckoutModal} className="btn btn-primary" style={{ padding: '0.75rem 2rem', borderRadius: '30px' }}>
-                        Proceed to Book
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+        );
+    };
 
     const renderBookings = () => (
         <div>
@@ -496,3 +520,4 @@ export default function CustomerDashboard() {
         </DashboardLayout>
     );
 }
+

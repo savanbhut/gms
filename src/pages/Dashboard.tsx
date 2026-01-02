@@ -4,24 +4,25 @@ import { CalendarDays, Users, Clock, CheckCircle, TrendingUp, Star } from 'lucid
 import '../styles/components.css';
 import '../styles/pages.css';
 import type { Booking, Feedback } from '@/types/gms';
+import CustomerDashboard from './CustomerDashboard';
 
-function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
-  trend, 
-  variant = 'default' 
-}: { 
-  title: string; 
-  value: string | number; 
-  icon: React.ComponentType<{ style?: React.CSSProperties }>; 
-  trend?: { value: number; isPositive: boolean }; 
-  variant?: 'default' | 'primary' | 'success' | 'warning' 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  variant = 'default'
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ style?: React.CSSProperties }>;
+  trend?: { value: number; isPositive: boolean };
+  variant?: 'default' | 'primary' | 'success' | 'warning'
 }) {
-  const variantClass = variant === 'primary' ? 'stat-card-primary' : 
-                       variant === 'success' ? 'stat-card-success' : 
-                       variant === 'warning' ? 'stat-card-warning' : '';
-  
+  const variantClass = variant === 'primary' ? 'stat-card-primary' :
+    variant === 'success' ? 'stat-card-success' :
+      variant === 'warning' ? 'stat-card-warning' : '';
+
   return (
     <div className={`stat-card ${variantClass}`}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -34,7 +35,7 @@ function StatCard({
             </p>
           )}
         </div>
-        <div className="stat-icon" style={{ 
+        <div className="stat-icon" style={{
           backgroundColor: variant === 'default' ? 'var(--color-muted)' : 'rgba(255,255,255,0.2)',
           padding: '0.75rem',
           borderRadius: '0.75rem'
@@ -59,7 +60,45 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={getClass()}>{status}</span>;
 }
 
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
 export default function Dashboard() {
+  const userRole = localStorage.getItem('userRole');
+  const [garageDetails, setGarageDetails] = useState<any>(null);
+  const [isEditGarageOpen, setIsEditGarageOpen] = useState(false);
+
+  useEffect(() => {
+    // Fetch Garage Details (Assuming GID 1 for single admin for now)
+    fetch('http://localhost:5000/api/garage/1')
+      .then(res => res.json())
+      .then(data => setGarageDetails(data))
+      .catch(err => console.error("Failed to fetch garage details", err));
+  }, []);
+
+  const handleSaveGarage = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/garage/1', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(garageDetails)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Garage details updated!');
+        setIsEditGarageOpen(false);
+      } else {
+        toast.error('Failed to update');
+      }
+    } catch (err) {
+      toast.error('Server error');
+    }
+  };
+
+  if (userRole === 'customer') {
+    return <CustomerDashboard />;
+  }
+
   return (
     <DashboardLayout title="Dashboard" subtitle="Welcome back, Rajesh!">
       {/* Stats Grid */}
@@ -91,19 +130,83 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Secondary Stats */}
+      {/* Secondary Stats & Garage Details */}
       <div className="page-grid page-grid-2" style={{ marginBottom: '2rem' }}>
         <StatCard
           title="Active Customers"
           value={dashboardStats.activeCustomers}
           icon={Users}
         />
-        <StatCard
-          title="Active Staff"
-          value={dashboardStats.activeStaff}
-          icon={Users}
-        />
+
+        {/* Garage Details Card */}
+        <div className="card">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 className="card-title">Garage Details</h3>
+            <button className="btn btn-outline btn-sm" onClick={() => setIsEditGarageOpen(true)}>Edit</button>
+          </div>
+          <div className="card-content">
+            {garageDetails ? (
+              <div style={{ fontSize: '0.9rem' }}>
+                <p><strong>Name:</strong> {garageDetails.g_name}</p>
+                <p><strong>Owner:</strong> {garageDetails.owner_name}</p>
+                <p><strong>Phone:</strong> {garageDetails.phone}</p>
+                <p><strong>Address:</strong> {garageDetails.address}</p>
+              </div>
+            ) : (
+              <p>Loading details...</p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Edit Garage Modal */}
+      {isEditGarageOpen && garageDetails && (
+        <div className="modal-overlay" onClick={() => setIsEditGarageOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Garage Details</h3>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="label">Garage Name</label>
+                <input
+                  className="input"
+                  value={garageDetails.g_name}
+                  onChange={(e) => setGarageDetails({ ...garageDetails, g_name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Owner Name</label>
+                <input
+                  className="input"
+                  value={garageDetails.owner_name}
+                  onChange={(e) => setGarageDetails({ ...garageDetails, owner_name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Phone</label>
+                <input
+                  className="input"
+                  value={garageDetails.phone}
+                  onChange={(e) => setGarageDetails({ ...garageDetails, phone: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Address</label>
+                <input
+                  className="input"
+                  value={garageDetails.address}
+                  onChange={(e) => setGarageDetails({ ...garageDetails, address: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setIsEditGarageOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveGarage}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Data */}
       <div className="page-grid page-grid-2">
@@ -171,7 +274,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </td>
-                      <td style={{ maxWidth: '150px' }} className="line-clamp-1">{feedback.description}</td>
+                      <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{feedback.description}</td>
                       <td>{feedback.date}</td>
                     </tr>
                   ))}

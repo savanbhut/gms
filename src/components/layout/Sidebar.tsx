@@ -27,8 +27,12 @@ const menuItems = [
   { icon: MessageSquare, label: 'Feedback', path: '/feedback' },
 ];
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
+
+export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const location = useLocation();
 
   return (
@@ -48,7 +52,21 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {menuItems.map((item) => {
+        {menuItems.filter(item => {
+          const role = localStorage.getItem('userRole');
+
+          if (role === 'customer') {
+            return item.path === '/dashboard';
+          }
+
+          if (role === 'manager') {
+            // Managers can't access Garages
+            return item.path !== '/garages';
+          }
+
+          // Admins see everything
+          return true;
+        }).map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link

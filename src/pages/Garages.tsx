@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { mockGarages } from '@/data/mockData';
 import { Plus, Search, MapPin, Phone, Mail, X } from 'lucide-react';
@@ -19,17 +20,55 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function Garages() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [garage, setGarage] = useState<any>(null); // Single garage for Admin
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [formData, setFormData] = useState<any>({});
 
-  const filteredGarages = mockGarages.filter(
-    (garage) =>
-      garage.garageName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      garage.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+  // Fetch Garage Details (Hardcoded GID 1 for single Admin)
+  useEffect(() => {
+    fetch('http://localhost:5000/api/garage/1')
+      .then(res => res.json())
+      .then(data => {
+        if (data.gid) setGarage(data);
+      })
+      .catch(err => console.error("Error fetching garage:", err));
+  }, []);
+
+  const handleEditClick = () => {
+    setFormData({ ...garage });
+    setIsEditOpen(true);
+  };
+
+  const handleSaveGarage = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/garage/${garage.gid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Garage updated successfully');
+        setGarage({ ...formData });
+        setIsEditOpen(false);
+      } else {
+        toast.error(data.message || 'Update failed');
+      }
+    } catch (err) {
+      toast.error('Server error');
+    }
+  };
+
+  if (!garage) return (
+    <DashboardLayout title="Garages" subtitle="Manage registered garages">
+      <div style={{ padding: '2rem' }}>Loading Garage Details...</div>
+    </DashboardLayout>
   );
 
   return (
     <DashboardLayout title="Garages" subtitle="Manage registered garages">
-      {/* Actions Bar */}
+
+      {/* Search Bar - Optional for single garage but kept for UI consistency */}
       <div className="actions-bar">
         <div className="search-wrapper">
           <Search />
@@ -39,118 +78,103 @@ export default function Garages() {
             className="input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            disabled
           />
         </div>
-        <button className="btn btn-primary" onClick={() => setIsDialogOpen(true)}>
-          <Plus style={{ width: '1rem', height: '1rem' }} />
-          Add Garage
-        </button>
       </div>
 
-      {/* Garages Grid */}
+      {/* Garages Grid (Single Card) */}
       <div className="page-grid page-grid-3" style={{ marginBottom: '2rem' }}>
-        {filteredGarages.map((garage: Garage) => (
-          <div key={garage.gid} className="garage-card">
-            <div className="garage-card-header">
-              <div>
-                <h3>{garage.garageName}</h3>
-                <p>{garage.ownerName}</p>
-              </div>
-              <StatusBadge status="Active" />
+        <div className="garage-card">
+          <div className="garage-card-header">
+            <div>
+              <h3>{garage.g_name}</h3>
+              <p>{garage.owner_name}</p>
             </div>
-            <div className="garage-card-details">
-              <div className="garage-card-detail">
-                <MapPin />
-                <span className="line-clamp-1">{garage.address}</span>
-              </div>
-              <div className="garage-card-detail">
-                <Phone />
-                <span>{garage.phone}</span>
-              </div>
-              <div className="garage-card-detail">
-                <Mail />
-                <span>{garage.email}</span>
-              </div>
+            <StatusBadge status="Active" />
+          </div>
+          <div className="garage-card-details">
+            <div className="garage-card-detail">
+              <MapPin />
+              <span className="line-clamp-1">{garage.address}</span>
             </div>
-            <div className="garage-card-actions">
-              <button className="btn btn-outline btn-sm">View</button>
-              <button className="btn btn-outline btn-sm">Edit</button>
+            <div className="garage-card-detail">
+              <Phone />
+              <span>{garage.phone}</span>
+            </div>
+            <div className="garage-card-detail">
+              <Mail />
+              <span>{garage.email}</span>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Table View */}
-      <div className="card">
-        <div className="card-content" style={{ padding: 0 }}>
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Garage Name</th>
-                  <th>Owner</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Pincode</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredGarages.map((garage: Garage) => (
-                  <tr key={garage.gid}>
-                    <td>{garage.gid}</td>
-                    <td>{garage.garageName}</td>
-                    <td>{garage.ownerName}</td>
-                    <td>{garage.phone}</td>
-                    <td>{garage.email}</td>
-                    <td>{garage.pincode}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="garage-card-actions">
+            <button className="btn btn-outline btn-sm" onClick={handleEditClick}>Edit</button>
           </div>
         </div>
       </div>
 
-      {/* Add Garage Dialog */}
-      {isDialogOpen && (
-        <div className="modal-overlay" onClick={() => setIsDialogOpen(false)}>
+      {/* Edit Garage Dialog */}
+      {isEditOpen && (
+        <div className="modal-overlay" onClick={() => setIsEditOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Register New Garage</h3>
-              <p className="modal-description">Add a new garage to the system</p>
+              <h3 className="modal-title">Edit Garage Details</h3>
             </div>
             <div className="modal-body">
               <div className="form-group">
                 <label className="label">Garage Name</label>
-                <input className="input" placeholder="Enter garage name" />
+                <input
+                  className="input"
+                  value={formData.g_name || ''}
+                  onChange={(e) => setFormData({ ...formData, g_name: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label className="label">Owner Name</label>
-                <input className="input" placeholder="Enter owner name" />
+                <input
+                  className="input"
+                  value={formData.owner_name || ''}
+                  onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="label">Phone</label>
-                  <input className="input" placeholder="+91 9876543210" />
+                  <input
+                    className="input"
+                    value={formData.phone || ''}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="label">Pincode</label>
-                  <input className="input" placeholder="380015" />
+                  <input
+                    className="input"
+                    value={formData.pincode || ''}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="form-group">
                 <label className="label">Email</label>
-                <input className="input" type="email" placeholder="garage@example.com" />
+                <input
+                  className="input"
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label className="label">Address</label>
-                <input className="input" placeholder="Full address" />
+                <input
+                  className="input"
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setIsDialogOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => setIsDialogOpen(false)}>Register Garage</button>
+              <button className="btn btn-outline" onClick={() => setIsEditOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveGarage}>Save Changes</button>
             </div>
           </div>
         </div>

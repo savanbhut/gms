@@ -1,10 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockStaff } from '@/data/mockData';
 import { Plus, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import '../styles/components.css';
 import '../styles/pages.css';
-import type { Staff } from '@/types/gms';
+
+interface Staff {
+  stfid: number;
+  f_name: string;
+  l_name: string;
+  role: string;
+  phone: string;
+  email: string;
+  salary: number;
+  join_date: string;
+  is_active: boolean;
+  education?: string;
+  address?: string;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const getClass = () => {
@@ -18,12 +31,75 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function StaffPage() {
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredStaff = mockStaff.filter(
+  // Form State
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    role: '',
+    phone: '',
+    email: '',
+    salary: '',
+    education: '',
+    address: ''
+  });
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/staff');
+      if (res.ok) {
+        setStaffList(await res.json());
+      }
+    } catch (err) {
+      console.error("Error fetching staff:", err);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.role || !formData.phone || !formData.email || !formData.salary) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        setIsDialogOpen(false);
+        fetchStaff();
+        setFormData({ firstName: '', lastName: '', role: '', phone: '', email: '', salary: '', education: '', address: '' });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to add staff");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredStaff = staffList.filter(
     (staff) =>
-      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${staff.f_name} ${staff.l_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       staff.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -51,15 +127,15 @@ export default function StaffPage() {
       <div className="page-grid page-grid-3" style={{ marginBottom: '1.5rem' }}>
         <div className="quick-stat">
           <p className="quick-stat-label">Total Staff</p>
-          <p className="quick-stat-value">{mockStaff.length}</p>
+          <p className="quick-stat-value">{staffList.length}</p>
         </div>
         <div className="quick-stat">
           <p className="quick-stat-label">Active Staff</p>
-          <p className="quick-stat-value success">{mockStaff.filter((s) => s.isActive).length}</p>
+          <p className="quick-stat-value success">{staffList.filter((s) => s.is_active).length}</p>
         </div>
         <div className="quick-stat">
           <p className="quick-stat-label">Total Salaries</p>
-          <p className="quick-stat-value">₹{mockStaff.reduce((acc, s) => acc + s.salary, 0).toLocaleString()}</p>
+          <p className="quick-stat-value">₹{staffList.reduce((acc, s) => acc + s.salary, 0).toLocaleString()}</p>
         </div>
       </div>
 
@@ -81,18 +157,23 @@ export default function StaffPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredStaff.map((staff: Staff) => (
+                {filteredStaff.map((staff) => (
                   <tr key={staff.stfid}>
                     <td>{staff.stfid}</td>
-                    <td>{staff.firstName} {staff.lastName}</td>
+                    <td>{staff.f_name} {staff.l_name}</td>
                     <td>{staff.role}</td>
                     <td>{staff.phone}</td>
                     <td>{staff.email}</td>
                     <td>₹{staff.salary.toLocaleString()}</td>
-                    <td>{staff.joinDate}</td>
-                    <td><StatusBadge status={staff.isActive ? 'Active' : 'Inactive'} /></td>
+                    <td>{new Date(staff.join_date).toLocaleDateString()}</td>
+                    <td><StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} /></td>
                   </tr>
                 ))}
+                {filteredStaff.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>No staff found</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -110,50 +191,52 @@ export default function StaffPage() {
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="label">First Name</label>
-                  <input className="input" placeholder="First name" />
+                  <label className="label">First Name *</label>
+                  <input name="firstName" className="input" placeholder="First name" value={formData.firstName} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label">Last Name</label>
-                  <input className="input" placeholder="Last name" />
+                  <label className="label">Last Name *</label>
+                  <input name="lastName" className="input" placeholder="Last name" value={formData.lastName} onChange={handleChange} />
                 </div>
               </div>
               <div className="form-group">
-                <label className="label">Role</label>
-                <select className="select">
+                <label className="label">Role *</label>
+                <select name="role" className="select" value={formData.role} onChange={handleChange}>
                   <option value="">Select role</option>
-                  <option value="mechanic">Mechanic</option>
-                  <option value="senior_mechanic">Senior Mechanic</option>
-                  <option value="receptionist">Receptionist</option>
-                  <option value="manager">Manager</option>
+                  <option value="Mechanic">Mechanic</option>
+                  <option value="Senior Mechanic">Senior Mechanic</option>
+                  <option value="Receptionist">Receptionist</option>
+                  <option value="Manager">Manager</option>
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="label">Phone</label>
-                  <input className="input" placeholder="+91 9876543210" />
+                  <label className="label">Phone *</label>
+                  <input name="phone" className="input" placeholder="10 digit number" maxLength={10} value={formData.phone} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label className="label">Salary</label>
-                  <input className="input" type="number" placeholder="25000" />
+                  <label className="label">Salary *</label>
+                  <input name="salary" className="input" type="number" placeholder="25000" value={formData.salary} onChange={handleChange} />
                 </div>
               </div>
               <div className="form-group">
-                <label className="label">Email</label>
-                <input className="input" type="email" placeholder="staff@example.com" />
+                <label className="label">Email *</label>
+                <input name="email" className="input" type="email" placeholder="staff@example.com" value={formData.email} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="label">Education</label>
-                <input className="input" placeholder="ITI, Diploma, etc." />
+                <input name="education" className="input" placeholder="ITI, Diploma, etc." value={formData.education} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="label">Address</label>
-                <input className="input" placeholder="Full address" />
+                <input name="address" className="input" placeholder="Full address" value={formData.address} onChange={handleChange} />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setIsDialogOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => setIsDialogOpen(false)}>Add Staff</button>
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? 'Adding...' : 'Add Staff'}
+              </button>
             </div>
           </div>
         </div>

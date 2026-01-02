@@ -61,10 +61,9 @@ export function Header({ title, subtitle }: HeaderProps) {
             className="header-user"
             onClick={() => setShowDropdown(!showDropdown)}
           >
-            <div className="avatar">RP</div>
+            <div className="avatar">{(localStorage.getItem('userName') || 'U')[0]}</div>
             <div className="header-user-info">
-              <p>Rajesh Patel</p>
-              <p>Admin</p>
+              <p>{localStorage.getItem('userName') || 'User'}</p>
             </div>
           </button>
           {showDropdown && (

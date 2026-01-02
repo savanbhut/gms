@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Car, Mail, Lock, Eye, EyeOff } from 'lucide-react'; // Added Users icon
 import { toast } from 'sonner';
 import '../styles/layout.css';
 import '../styles/components.css';
@@ -8,8 +8,11 @@ import '../styles/components.css';
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // New State for Role - Removed manual selection
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,31 +22,44 @@ export default function Login() {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
+
+    // Simulate API call and Auto-detect Role
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Save role and user info to localStorage
+        localStorage.setItem('userRole', data.user.role);
+        localStorage.setItem('userUid', data.user.uid); // Save UID for fetching bookings
+        localStorage.setItem('userName', data.user.name);
+
+        toast.success(`Login successful as ${data.user.role}!`);
+        navigate('/dashboard');
+      } else {
+        toast.error(data.message || 'Invalid Credentials');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      toast.error('Server error. Is the backend running?');
+    } finally {
       setIsLoading(false);
-      toast.success('Login successful!');
-      navigate('/dashboard');
-    }, 1000);
+    }
   };
 
   return (
-    <div className="auth-layout">
-      {/* Left side - Branding */}
-      <div className="auth-branding">
-        <div className="auth-branding-content">
-          <div className="auth-branding-logo">
-            <Car style={{ width: '2.5rem', height: '2.5rem', color: 'white' }} />
-          </div>
-          <h1>Garage Management System</h1>
-          <p>
-            Streamline your garage operations with our comprehensive management solution.
-            Track bookings, manage staff, and grow your business.
-          </p>
-        </div>
-      </div>
+    // Added inline styles to center the content and remove the split layout feel
+    <div className="auth-layout" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem' }}>
 
-      {/* Right side - Login form */}
-      <div className="auth-form-container">
+      {/* Removed "auth-branding" div completely */}
+
+      {/* Login form - Added maxWidth to keep it centered and nice looking */}
+      <div className="auth-form-container" style={{ width: '100%', maxWidth: '480px' }}>
         <div className="auth-card card">
           <div className="card-header text-center">
             <div className="auth-card-mobile-logo" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
@@ -54,7 +70,8 @@ export default function Login() {
                 background: 'linear-gradient(135deg, #6366f1, #818cf8)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                margin: '0 auto' // Ensure logo is centered
               }}>
                 <Car style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
               </div>
@@ -65,6 +82,9 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <div className="card-content">
+
+              {/* Role Dropdown Removed - Auto-detected */}
+
               <div className="form-group">
                 <label htmlFor="email" className="label">Email</label>
                 <div className="input-wrapper">

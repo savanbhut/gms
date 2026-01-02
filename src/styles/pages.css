@@ -1,0 +1,435 @@
+/* Page-specific Styles */
+
+/* Landing Page */
+.landing-hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-background), var(--color-muted));
+  padding: var(--spacing-8);
+}
+
+.landing-hero-content {
+  text-align: center;
+  max-width: 48rem;
+}
+
+.landing-hero h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-4);
+  color: var(--color-foreground);
+}
+
+@media (min-width: 768px) {
+  .landing-hero h1 {
+    font-size: 3rem;
+  }
+}
+
+.landing-hero p {
+  font-size: var(--font-size-xl);
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--spacing-8);
+}
+
+.landing-hero-buttons {
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Dashboard Stats */
+.stats-grid {
+  display: grid;
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-8);
+}
+
+@media (min-width: 768px) {
+  .stats-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Garage Card */
+.garage-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  transition: box-shadow var(--transition-normal);
+}
+
+.garage-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.garage-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-4);
+}
+
+.garage-card-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.garage-card-header p {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+}
+
+.garage-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+.garage-card-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-muted-foreground);
+}
+
+.garage-card-detail svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.garage-card-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.garage-card-actions .btn {
+  flex: 1;
+}
+
+/* Customer Card */
+.customer-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  transition: box-shadow var(--transition-normal);
+}
+
+.customer-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.customer-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.customer-card .avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+  font-size: var(--font-size-lg);
+}
+
+.customer-card-header h3 {
+  font-weight: 600;
+}
+
+.customer-card-header p {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+}
+
+/* Service Card */
+.service-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  transition: box-shadow var(--transition-normal);
+}
+
+.service-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.service-card.inactive {
+  opacity: 0.6;
+}
+
+.service-card-icon {
+  padding: var(--spacing-3);
+  border-radius: var(--radius-xl);
+  background-color: rgba(99, 102, 241, 0.1);
+  display: inline-flex;
+  margin-bottom: var(--spacing-4);
+}
+
+.service-card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-primary);
+}
+
+.service-card h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--spacing-2);
+}
+
+.service-card-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--spacing-4);
+}
+
+.service-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--spacing-4);
+}
+
+.service-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.service-card-meta-item svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.service-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.service-card-price {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Feedback Card */
+.feedback-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  transition: box-shadow var(--transition-normal);
+}
+
+.feedback-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.feedback-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.feedback-card-header .avatar {
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.feedback-card-info {
+  flex: 1;
+}
+
+.feedback-card-info h3 {
+  font-weight: 600;
+}
+
+.feedback-card-info p {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+}
+
+.feedback-card-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  line-height: 1.6;
+}
+
+.feedback-card-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Star Rating */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star-rating svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.star-rating svg.filled {
+  color: var(--color-warning);
+  fill: var(--color-warning);
+}
+
+.star-rating svg.empty {
+  color: var(--color-muted);
+}
+
+/* Rating Distribution */
+.rating-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.rating-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  width: 5rem;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.rating-bar {
+  flex: 1;
+  height: 0.5rem;
+  background-color: var(--color-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.rating-bar-fill {
+  height: 100%;
+  background-color: var(--color-warning);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+.rating-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  width: 3rem;
+}
+
+/* Payment Method Card */
+.payment-method-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-muted);
+}
+
+.payment-method-icon {
+  padding: var(--spacing-2);
+  border-radius: var(--radius-lg);
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.payment-method-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.payment-method-info p:first-child {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.payment-method-info p:last-child {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+}
+
+/* Quick Stats Card */
+.quick-stat {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-4);
+}
+
+.quick-stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+}
+
+.quick-stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+}
+
+.quick-stat-value.success {
+  color: var(--color-success);
+}
+
+.quick-stat-value.warning {
+  color: var(--color-warning);
+}
+
+.quick-stat-value.primary {
+  color: var(--color-primary);
+}
+
+/* Colored Stat Cards */
+.stat-card-colored {
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-4);
+}
+
+.stat-card-colored.warning {
+  background-color: var(--color-warning-light);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.stat-card-colored.info {
+  background-color: var(--color-info-light);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.stat-card-colored.success {
+  background-color: var(--color-success-light);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}

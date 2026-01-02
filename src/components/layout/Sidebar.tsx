@@ -18,7 +18,7 @@ import '../../styles/layout.css';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Building2, label: 'Garages', path: '/garages' },
+  { icon: Building2, label: 'Garage', path: '/garages' },
   { icon: Users, label: 'Staff', path: '/staff' },
   { icon: UserCircle, label: 'Customers', path: '/customers' },
   { icon: Wrench, label: 'Services', path: '/services' },

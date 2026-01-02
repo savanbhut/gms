@@ -117,7 +117,11 @@ export default function Bookings() {
                     <td>{booking.serviceName}</td>
                     <td>{booking.date}</td>
                     <td>{booking.time}</td>
-                    <td className="line-clamp-1" style={{ maxWidth: '300px' }}>{booking.description}</td>
+                    <td>
+                      <div className="line-clamp-1" style={{ maxWidth: '300px' }}>
+                        {booking.description}
+                      </div>
+                    </td>
                     <td><StatusBadge status={booking.status} /></td>
                   </tr>
                 ))}

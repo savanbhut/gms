@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { mockGarages } from '@/data/mockData';
-import { Plus, Search, MapPin, Phone, Mail, X } from 'lucide-react';
+import { Plus, MapPin, Phone, Mail, X } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
 import type { Garage } from '@/types/gms';
@@ -19,7 +19,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function Garages() {
-  const [searchQuery, setSearchQuery] = useState('');
+
   const [garage, setGarage] = useState<any>(null); // Single garage for Admin
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
@@ -68,47 +68,100 @@ export default function Garages() {
   return (
     <DashboardLayout title="Garages" subtitle="Manage registered garages">
 
-      {/* Search Bar - Optional for single garage but kept for UI consistency */}
-      <div className="actions-bar">
-        <div className="search-wrapper">
-          <Search />
-          <input
-            type="text"
-            placeholder="Search garages..."
-            className="input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            disabled
-          />
-        </div>
-      </div>
 
-      {/* Garages Grid (Single Card) */}
-      <div className="page-grid page-grid-3" style={{ marginBottom: '2rem' }}>
-        <div className="garage-card">
-          <div className="garage-card-header">
-            <div>
-              <h3>{garage.g_name}</h3>
-              <p>{garage.owner_name}</p>
+
+      {/* Full Width Profile View */}
+      <div className="card" style={{ maxWidth: '800px', margin: '0 auto', overflow: 'hidden' }}>
+
+        {/* Banner / Header Section */}
+        <div style={{
+          height: '140px',
+          background: 'var(--color-primary)',
+          position: 'relative',
+          padding: '2rem',
+          color: 'white'
+        }}>
+          <div style={{ position: 'absolute', bottom: '-2rem', left: '2rem', display: 'flex', alignItems: 'end', gap: '1.5rem' }}>
+            <div style={{
+              width: '5rem',
+              height: '5rem',
+              background: 'white',
+              borderRadius: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+            }}>
+              <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                {garage.g_name ? garage.g_name[0] : 'G'}
+              </span>
             </div>
-            <StatusBadge status="Active" />
+            <div style={{ paddingBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', lineHeight: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>{garage.g_name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem', opacity: 0.9 }}>Main Branch</span>
+              </div>
+            </div>
           </div>
-          <div className="garage-card-details">
-            <div className="garage-card-detail">
-              <MapPin />
-              <span className="line-clamp-1">{garage.address}</span>
+
+          <button
+            className="btn"
+            onClick={handleEditClick}
+            style={{
+              position: 'absolute',
+              top: '1.5rem',
+              right: '1.5rem',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }}
+          >
+            Edit Details
+          </button>
+        </div>
+
+        {/* Content Section */}
+        <div style={{ padding: '4rem 2rem 2rem 2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem' }}>
+                Contact Information
+              </h3>
+              <div className="space-y-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--color-muted-foreground)' }}>
+                  <Mail className="w-5 h-5 text-primary" />
+                  <span>{garage.email}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--color-muted-foreground)' }}>
+                  <Phone className="w-5 h-5 text-primary" />
+                  <span>{garage.phone}</span>
+                </div>
+              </div>
             </div>
-            <div className="garage-card-detail">
-              <Phone />
-              <span>{garage.phone}</span>
+
+            {/* Location & Owner */}
+            <div className="space-y-4">
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem' }}>
+                Location & Management
+              </h3>
+              <div className="space-y-3">
+                <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', color: 'var(--color-muted-foreground)' }}>
+                  <MapPin className="w-5 h-5 text-primary shrink-0" style={{ marginTop: '0.25rem' }} />
+                  <div>
+                    <p>{garage.address}</p>
+                    <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>Pincode: {garage.pincode}</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--color-muted-foreground)' }}>
+                  <div style={{ width: '1.25rem', height: '1.25rem', borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem' }}>O</div>
+                  <span>Owner: {garage.owner_name}</span>
+                </div>
+              </div>
             </div>
-            <div className="garage-card-detail">
-              <Mail />
-              <span>{garage.email}</span>
-            </div>
-          </div>
-          <div className="garage-card-actions">
-            <button className="btn btn-outline btn-sm" onClick={handleEditClick}>Edit</button>
+
           </div>
         </div>
       </div>

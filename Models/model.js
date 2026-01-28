@@ -139,5 +139,10 @@ module.exports = {
   Booking: mongoose.model('Booking', BookingSchema),
   BookedService: mongoose.model('BookedService', BookedServiceSchema),
   Payment: mongoose.model('Payment', PaymentSchema),
-  Feedback: mongoose.model('Feedback', FeedbackSchema)
+  Feedback: mongoose.model('Feedback', FeedbackSchema),
+  OTP: mongoose.model('OTP', new mongoose.Schema({
+    email: { type: String, required: true },
+    otp: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now, expires: 600 } // Expires in 10 minutes
+  }))
 };

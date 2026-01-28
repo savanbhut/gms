@@ -8,7 +8,7 @@ mongoose.connect('mongodb://127.0.0.1:27017/gms_db')
         // Update GarageList (The Agency/HQ)
         const res = await GarageList.updateOne(
             { glid: 1 },
-            { $set: { owner_name: 'Super Admin' } }
+            { $set: { owner_name: 'Admin' } }
         );
         console.log('GarageList Update Result:', res);
 

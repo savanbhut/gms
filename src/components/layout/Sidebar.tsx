@@ -13,7 +13,15 @@ import {
   LogOut,
   ChevronLeft,
   Car,
+  ChevronDown,
 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { useEffect } from 'react';
 import '../../styles/layout.css';
 
 const menuItems = [
@@ -34,6 +42,21 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const location = useLocation();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
@@ -56,7 +79,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           const role = localStorage.getItem('userRole');
 
           if (role === 'customer') {
-            return item.path === '/dashboard';
+            return ['/services', '/bookings', '/payments', '/feedback'].includes(item.path);
           }
 
           if (role === 'manager') {
@@ -83,16 +106,53 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         })}
       </nav>
 
+
       {/* Bottom actions */}
       <div className="sidebar-bottom">
-        <Link to="/settings" className="sidebar-nav-item">
-          <Settings className="sidebar-nav-icon" />
-          {!collapsed && <span className="sidebar-nav-label">Settings</span>}
-        </Link>
+        <Collapsible
+          open={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          className="w-full"
+        >
+          <CollapsibleTrigger asChild>
+            <button className="sidebar-nav-item w-full flex items-center justify-between group">
+              <div className="flex items-center gap-3">
+                <Settings className="sidebar-nav-icon" />
+                {!collapsed && <span className="sidebar-nav-label">Settings</span>}
+              </div>
+              {!collapsed && (
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${isSettingsOpen ? "rotate-180" : ""
+                    }`}
+                />
+              )}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="sidebar-sub-menu space-y-1">
+            {!collapsed && (
+              <div className="ml-9 mt-1 flex flex-col gap-1 border-l border-border/50 pl-2">
+                <button
+                  onClick={() => setIsDark(!isDark)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-gray-300 hover:bg-accent hover:text-accent-foreground"
+                >
+                  <span>Theme</span>
+                  <span className="text-xs font-medium">{isDark ? "Dark" : "Light"}</span>
+                </button>
+                <button
+                  onClick={() => setShowPasswordDialog(true)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-gray-300 hover:bg-accent hover:text-accent-foreground"
+                >
+                  <span>Change Password</span>
+                </button>
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+
         <button
           onClick={() => {
             localStorage.clear();
-            window.location.href = '/login';
+            window.location.href = '/';
           }}
           className="sidebar-nav-item logout"
           style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
@@ -109,6 +169,11 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       >
         <ChevronLeft />
       </button>
+
+      <ChangePasswordDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+      />
     </aside>
   );
 }

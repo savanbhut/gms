@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockCustomers } from '@/data/mockData';
+// import { mockCustomers, mockBookings } from '@/data/mockData';
 import { Search, Mail, Phone, MapPin } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
@@ -9,12 +9,30 @@ import type { Customer } from '@/types/gms';
 export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]); // Use booking type if available
 
-  const filteredCustomers = mockCustomers.filter(
+  useEffect(() => {
+    fetch('http://localhost:5000/api/customers')
+      .then(res => res.json())
+      .then(data => setCustomers(data))
+      .catch(err => console.error(err));
+
+    fetch('http://localhost:5000/api/bookings')
+      .then(res => res.json())
+      .then(data => setBookings(data))
+      .catch(err => console.error(err));
+  }, []);
+
+  const filteredCustomers = customers.filter(
     (customer) =>
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Dynamic Stats
+  const activeBookingsCount = bookings.filter(b => b.status === 'Pending' || b.status === 'In Progress').length;
+  const newCustomersCount = customers.length; // Simply showing total count as 'new' for now or 0
 
   return (
     <DashboardLayout title="Customers" subtitle="View and manage customer profiles">
@@ -50,15 +68,15 @@ export default function Customers() {
       <div className="page-grid page-grid-3" style={{ marginBottom: '1.5rem' }}>
         <div className="quick-stat">
           <p className="quick-stat-label">Total Customers</p>
-          <p className="quick-stat-value">{mockCustomers.length}</p>
+          <p className="quick-stat-value">{customers.length}</p>
         </div>
         <div className="quick-stat">
           <p className="quick-stat-label">New This Month</p>
-          <p className="quick-stat-value success">12</p>
+          <p className="quick-stat-value success">{newCustomersCount}</p>
         </div>
         <div className="quick-stat">
           <p className="quick-stat-label">Active Bookings</p>
-          <p className="quick-stat-value primary">8</p>
+          <p className="quick-stat-value primary">{activeBookingsCount}</p>
         </div>
       </div>
 
@@ -89,10 +107,7 @@ export default function Customers() {
                   <span className="line-clamp-1">{customer.address}</span>
                 </div>
               </div>
-              <div className="garage-card-actions">
-                <button className="btn btn-outline btn-sm">View Profile</button>
-                <button className="btn btn-outline btn-sm">Bookings</button>
-              </div>
+
             </div>
           ))}
         </div>
@@ -103,10 +118,10 @@ export default function Customers() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Email</th>
+                    <th style={{ width: '80px' }}>ID</th>
+                    <th style={{ width: '200px' }}>Name</th>
+                    <th style={{ width: '150px' }}>Phone</th>
+                    <th style={{ width: '250px' }}>Email</th>
                     <th>Address</th>
                   </tr>
                 </thead>
@@ -117,7 +132,7 @@ export default function Customers() {
                       <td>{customer.name}</td>
                       <td>{customer.phone}</td>
                       <td>{customer.email}</td>
-                      <td className="line-clamp-1" style={{ maxWidth: '200px' }}>{customer.address}</td>
+                      <td>{customer.address}</td>
                     </tr>
                   ))}
                 </tbody>

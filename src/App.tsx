@@ -15,42 +15,50 @@ import Bookings from "./pages/Bookings";
 import Payments from "./pages/Payments";
 import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
 import { ProtectedRoute, PublicRoute } from "./components/ProtectedRoute";
+
+import { useEffect } from 'react';
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
+const App = () => {
 
-          {/* Public Routes - redirected to dashboard if logged in */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
 
-          {/* Protected Routes - redirected to login if NOT logged in */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/garages" element={<Garages />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/feedback" element={<Feedback />} />
-          </Route>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+            {/* Public Routes - redirected to dashboard if logged in */}
+            <Route element={<PublicRoute />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+            </Route>
+
+            {/* Protected Routes - redirected to login if NOT logged in */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/garages" element={<Garages />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/feedback" element={<Feedback />} />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

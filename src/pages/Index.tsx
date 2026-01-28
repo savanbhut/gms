@@ -1,135 +1,169 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Car, ArrowRight, Star, Quote, Wrench, Calendar, CheckCircle } from 'lucide-react';
-import '../styles/layout.css';
-import '../styles/components.css';
-import '../styles/pages.css';
+import { Car, ArrowRight, Star, Quote, Wrench, Calendar, MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Index() {
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)', display: 'flex', flexDirection: 'column' }}>
-      {/* Navigation */}
-      <nav style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '1rem 2rem',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-card)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '2.5rem',
-            height: '2.5rem',
-            borderRadius: '0.75rem',
-            background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)'
-          }}>
-            <Car style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.025em' }}>GMS</span>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link to="/login" className="btn btn-ghost" style={{ fontWeight: 600 }}>Sign In</Link>
+  const [garage, setGarage] = useState<any>(null);
 
+  useEffect(() => {
+    fetch('http://localhost:5000/api/garage/1')
+      .then(res => res.json())
+      .then(data => {
+        if (data.gid) setGarage(data);
+      })
+      .catch(err => console.error("Error fetching garage:", err));
+  }, []);
+
+  const testimonials = [
+    { name: 'Ravi Patel', role: 'Business Owner', rating: 5, text: 'The AC service was incredibly fast. I booked online, dropped my car off, and it was ready in 2 hours. Superb status tracking!' },
+    { name: 'Sneha Joshi', role: 'Daily Commuter', rating: 4, text: 'Honest pricing and very professional staff. I really liked how I could pay online and just pick up my keys.' },
+    { name: 'Amit Kumar', role: 'Car Enthusiast', rating: 5, text: 'Best garage in the city. They treat your car like their own. Highly recommended!' },
+    { name: 'Priya Singh', role: 'Teacher', rating: 5, text: 'Very convenient booking process and transparent pricing. No surprises at the end.' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary/20">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/50 supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+              <Car className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-display font-bold text-2xl tracking-tight">GMS</span>
+          </div>
+          <div className="flex gap-4">
+            <Link to="/login">
+              <Button variant="ghost" className="font-semibold hover:bg-primary/10 hover:text-primary">
+                Sign In
+              </Button>
+            </Link>
+
+          </div>
         </div>
       </nav>
 
-      <main style={{ flex: 1 }}>
-        {/* Hero Section - Simplified & Aesthetic */}
-        <section style={{
-          padding: '8rem 2rem 6rem',
-          textAlign: 'center',
-          background: 'radial-gradient(circle at top center, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ maxWidth: '48rem', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-            <div className="badge badge-primary" style={{ marginBottom: '1.5rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-              #1 Garage Management Solution
+      <main className="flex-1 pt-16">
+        {/* Hero Section */}
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+          {/* Abstract Background Elements */}
+          <div className="absolute inset-0 z-0">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '1s' }} />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10 text-center">
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
+
+
+              <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
+                Premium Auto Care,<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-500 to-yellow-500 animate-shimmer bg-[length:200%_auto]">
+                  Simplified.
+                </span>
+              </h1>
+
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+                Experience the future of car maintenance. Book top-tier services and manage everything from one beautiful dashboard.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link to="/login">
+                  <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-1 transition-all duration-300 animate-float">
+                    Book a Service <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+                <Link to="/services">
+                  <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-2 hover:bg-secondary/50 hover:text-foreground">
+                    View Services
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <h1 style={{
-              fontSize: '3.5rem',
-              fontWeight: 800,
-              marginBottom: '1.5rem',
-              lineHeight: 1.1,
-              background: 'linear-gradient(to right, var(--color-foreground), var(--color-primary))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Premium Auto Care<br />Simplified.
-            </h1>
-            <p style={{ fontSize: '1.25rem', color: 'var(--color-muted-foreground)', marginBottom: '2.5rem', maxWidth: '36rem', marginInline: 'auto' }}>
-              Book top-tier car services, track repairs, and manage your garage experience all in one place.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <Link to="/login" className="btn btn-primary btn-lg" style={{ borderRadius: '2rem', paddingInline: '2rem' }}>
-                Book a Service <ArrowRight style={{ width: '1.25rem', height: '1.25rem', marginLeft: '0.5rem' }} />
-              </Link>
+
+            {/* Stats */}
+            <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-forwards opacity-0">
+              {[
+                { label: 'Happy Customers', value: '10k+' },
+                { label: 'Expert Mechanics', value: '50+' },
+                { label: 'Services Completed', value: '25k+' },
+                { label: 'Average Rating', value: '4.9/5' },
+              ].map((stat, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <span className="text-3xl font-display font-bold text-foreground">{stat.value}</span>
+                  <span className="text-sm text-muted-foreground font-medium">{stat.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Services Section - Clean Cards */}
-        <section style={{ padding: '6rem 2rem', backgroundColor: 'var(--color-card)' }}>
-          <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-              <h2 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '1rem' }}>Expert Services</h2>
-              <p style={{ color: 'var(--color-muted-foreground)', fontSize: '1.125rem' }}>Professional care for your vehicle</p>
+        {/* Services Section */}
+        <section className="py-24 relative overflow-hidden bg-secondary/5">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Expert Services</h2>
+              <p className="text-muted-foreground text-lg">Professional care for your vehicle, tailored to your needs.</p>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '2rem'
-            }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {[
-                { title: 'Oil Change', price: '₹1,500', icon: Wrench, desc: 'Premium synthetic oil change with filter replacement and multi-point inspection.' },
-                { title: 'Brake Service', price: '₹3,500', icon: Car, desc: 'Complete brake pad replacement, rotor resurfacing (if needed), and fluid check.' },
-                { title: 'AC Service', price: '₹2,500', icon: Calendar, desc: 'AC system diagnostic, leak test, gas refill, and cabin filter cleaning.' }
+                {
+                  title: 'Oil Change',
+                  price: '₹1,500',
+                  icon: Wrench,
+                  desc: 'Premium synthetic oil change with filter replacement and multi-point inspection.',
+                  color: 'from-blue-500 to-cyan-500',
+                  image: '/assets/oil_change.png'
+                },
+                {
+                  title: 'Brake Service',
+                  price: '₹3,500',
+                  icon: Car,
+                  desc: 'Complete brake pad replacement, rotor resurfacing (if needed), and fluid check.',
+                  color: 'from-red-500 to-pink-500',
+                  image: '/assets/brake_service.png'
+                },
+                {
+                  title: 'AC Service',
+                  price: '₹2,500',
+                  icon: Calendar,
+                  desc: 'AC system diagnostic, leak test, gas refill, and cabin filter cleaning.',
+                  color: 'from-green-500 to-emerald-500',
+                  image: '/assets/ac_service.png'
+                }
               ].map((service, index) => (
-                <div key={index} className="card service-hover-card" style={{
-                  padding: '2.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '1.5rem',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <div style={{
-                    marginBottom: '1.5rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start'
-                  }}>
-                    <div style={{
-                      padding: '1rem',
-                      borderRadius: '1rem',
-                      backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                      color: 'var(--color-primary)'
-                    }}>
-                      <service.icon style={{ width: '2rem', height: '2rem' }} />
+                <div key={index} className="group relative bg-card border border-border rounded-3xl overflow-hidden hover:-translate-y-2 transition-all duration-300 hover:shadow-2xl flex flex-col h-full">
+                  <div className="h-56 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute bottom-4 left-4 z-20 flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center shadow-lg text-white`}>
+                        <service.icon className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-2xl font-bold font-display text-white">{service.title}</h3>
                     </div>
-                    <span style={{
-                      fontWeight: 700,
-                      fontSize: '1.25rem',
-                      backgroundColor: 'var(--color-background)',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '2rem',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}>{service.price}</span>
                   </div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>{service.title}</h3>
-                  <p style={{ color: 'var(--color-muted-foreground)', marginBottom: '2rem', flex: 1, lineHeight: '1.6' }}>{service.desc}</p>
 
-                  <div style={{ marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0', fontSize: '0.875rem', color: 'var(--color-muted-foreground)' }}>
-                      <CheckCircle style={{ width: '1rem', height: '1rem', color: 'var(--color-success)' }} /> Expert Mechanics
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="bg-secondary/50 backdrop-blur border border-border/50 px-3 py-1 rounded-full text-sm font-bold shadow-sm">
+                        {service.price}
+                      </span>
+                    </div>
+
+                    <p className="text-muted-foreground mb-8 line-clamp-3">{service.desc}</p>
+
+                    <div className="mt-auto pt-6 border-t border-border/50">
+                      <Link to="/login" className="flex items-center text-primary font-semibold group-hover:translate-x-1 transition-transform">
+                        Book Now <ArrowRight className="w-4 h-4 ml-2" />
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -138,90 +172,118 @@ export default function Index() {
           </div>
         </section>
 
-        {/* Feedback Section - Modern Look */}
-        <section style={{ padding: '6rem 2rem', position: 'relative' }}>
-          <div style={{ maxWidth: '64rem', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-              <h2 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '1rem' }}>Client Stories</h2>
-              <p style={{ color: 'var(--color-muted-foreground)', fontSize: '1.125rem' }}>Trusted by hundreds of happy customers</p>
+        {/* Testimonials Marquee */}
+        <section className="py-24 bg-card/30 overflow-hidden">
+          <div className="container mx-auto px-4 mb-12">
+            <div className="text-center">
+              <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Client Stories</h2>
+              <p className="text-muted-foreground text-lg">Don't just take our word for it.</p>
             </div>
+          </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '2rem'
-            }}>
-              {[
-                { name: 'Ravi Patel', role: 'Business Owner', rating: 5, text: 'The AC service was incredibly fast. I booked online, dropped my car off, and it was ready in 2 hours. Superb status tracking!' },
-                { name: 'Sneha Joshi', role: 'Daily Commuter', rating: 4, text: 'Honest pricing and very professional staff. I really liked how I could pay online and just pick up my keys.' }
-              ].map((feedback, index) => (
-                <div key={index} className="card" style={{
-                  padding: '2.5rem',
-                  border: 'none',
-                  backgroundColor: 'var(--color-background)',
-                  boxShadow: 'var(--shadow-md)',
-                  position: 'relative'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{
-                      width: '3rem',
-                      height: '3rem',
-                      borderRadius: '50%',
-                      background: 'var(--color-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 700
-                    }}>
+          <div className="relative w-full">
+            <div className="flex animate-scroll hover:pause gap-8 w-max">
+              {[...testimonials, ...testimonials, ...testimonials].map((feedback, index) => (
+                <div key={index} className="w-[400px] shrink-0 bg-background p-8 rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow relative">
+                  <Quote className="absolute top-8 right-8 w-10 h-10 text-primary/10" />
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white font-bold text-lg">
                       {feedback.name[0]}
                     </div>
                     <div>
-                      <p style={{ fontWeight: 700, color: 'var(--color-foreground)' }}>{feedback.name}</p>
+                      <h4 className="font-bold text-lg">{feedback.name}</h4>
+                      <p className="text-sm text-muted-foreground">{feedback.role}</p>
                     </div>
                   </div>
-
-                  <Quote style={{
-                    position: 'absolute',
-                    top: '2rem',
-                    right: '2rem',
-                    width: '3rem',
-                    height: '3rem',
-                    color: 'var(--color-muted)',
-                    opacity: 0.5
-                  }} />
-                  <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem' }}>
+                  <div className="flex gap-1 mb-4">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        style={{ width: '1.25rem', height: '1.25rem' }}
-                        fill={i < feedback.rating ? '#eab308' : 'none'}
-                        color={i < feedback.rating ? '#eab308' : 'var(--color-border)'}
-                      />
+                      <Star key={i} className={`w-4 h-4 ${i < feedback.rating ? 'fill-yellow-400 text-yellow-400' : 'text-border'}`} />
                     ))}
                   </div>
-                  <p style={{ fontSize: '1.125rem', lineHeight: '1.7', position: 'relative', zIndex: 1 }}>"{feedback.text}"</p>
+                  <p className="text-muted-foreground italic leading-relaxed">"{feedback.text}"</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
+
+        {/* Location Section */}
+        {garage && (
+          <section className="py-24 relative overflow-hidden bg-background">
+            {/* Background decoration */}
+            <div className="absolute inset-0 bg-secondary/30 z-0"></div>
+
+            <div className="container mx-auto px-4 relative z-10">
+              <div className="text-center mb-16">
+                <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Visit Our Garage</h2>
+                <p className="text-muted-foreground text-lg">We are here to help you with all your automotive needs.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Address */}
+                <div className="bg-card p-8 rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col items-center text-center group">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <MapPin className="w-8 h-8 text-primary group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-3">Address</h3>
+                  <p className="text-muted-foreground">
+                    {garage.address}
+                    {garage.city && <><br />{garage.city}</>}
+                    <br />Pincode: {garage.pincode}
+                  </p>
+                </div>
+
+                {/* Phone */}
+                <div className="bg-card p-8 rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col items-center text-center group">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Phone className="w-8 h-8 text-primary group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-3">Phone</h3>
+                  <p className="text-muted-foreground">{garage.phone}</p>
+                </div>
+
+                {/* Email */}
+                <div className="bg-card p-8 rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col items-center text-center group">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Mail className="w-8 h-8 text-primary group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-3">Email</h3>
+                  <p className="text-muted-foreground">{garage.email}</p>
+                </div>
+
+                {/* Hours */}
+                <div className="bg-card p-8 rounded-3xl border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col items-center text-center group">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Clock className="w-8 h-8 text-primary group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-3">Opening Hours</h3>
+                  <p className="text-muted-foreground">
+                    Mon - Sat: 9:00 AM - 7:00 PM<br />
+                    Sunday: Closed
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Footer */}
-      <footer style={{
-        padding: '3rem 2rem',
-        textAlign: 'center',
-        borderTop: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-card)',
-        color: 'var(--color-muted-foreground)',
-        fontSize: '0.875rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <Car style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-primary)' }} />
-          <span style={{ fontWeight: 700, color: 'var(--color-foreground)' }}>GMS</span>
+      <footer className="py-12 bg-card border-t border-border">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <Car className="w-6 h-6 text-primary" />
+            <span className="font-display font-bold text-xl">GMS</span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            © 2025 Garage Management System. All rights reserved.
+          </div>
+          <div className="flex gap-6 text-muted-foreground">
+            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+            <a href="#" className="hover:text-primary transition-colors">Terms</a>
+            <a href="#" className="hover:text-primary transition-colors">Contact</a>
+          </div>
         </div>
-        <p>© 2025 Garage Management System. All rights reserved.</p>
       </footer>
     </div>
   );

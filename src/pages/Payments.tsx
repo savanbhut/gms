@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import CustomerPayments from '@/pages/customer/Payments';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockPayments, mockBookings } from '@/data/mockData';
+// import { mockPayments, mockBookings } from '@/data/mockData';
 import { Search, Download, CreditCard, Wallet, Building, Smartphone } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
-import type { Payment, PaymentStatus } from '@/types/gms';
+import type { Payment, PaymentStatus, Booking } from '@/types/gms';
 
 function StatusBadge({ status }: { status: string }) {
   const getClass = () => {
@@ -27,20 +28,52 @@ const paymentIcons: Record<string, React.ReactNode> = {
 };
 
 export default function Payments() {
+  const role = localStorage.getItem('userRole');
+  if (role === 'customer') return <CustomerPayments />;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
-  const filteredPayments = mockPayments.filter((payment) => {
+  useEffect(() => {
+    // Fetch Payments
+    fetch('http://localhost:5000/api/payments')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Map backend snake_case to frontend camelCase
+          const mappedData = data.map((p: any) => ({
+            ...p,
+            paymentType: p.payment_type || p.paymentType,
+            transactionId: p.transaction_id || p.transactionId
+          }));
+          setPayments(mappedData);
+        } else console.error("Invalid payments response:", data);
+      })
+      .catch(err => console.error("Error fetching payments", err));
+
+    // Fetch Bookings (for names)
+    fetch('http://localhost:5000/api/bookings')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setBookings(data);
+        else console.error("Invalid bookings response:", data);
+      })
+      .catch(err => console.error("Error fetching bookings", err));
+  }, []);
+
+  const filteredPayments = payments.filter((payment) => {
     const matchesSearch = payment.transactionId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const totalRevenue = mockPayments
+  const totalRevenue = payments
     .filter((p) => p.status === 'Success')
     .reduce((acc, p) => acc + p.amount, 0);
 
-  const pendingAmount = mockPayments
+  const pendingAmount = payments
     .filter((p) => p.status === 'Pending')
     .reduce((acc, p) => acc + p.amount, 0);
 
@@ -58,12 +91,12 @@ export default function Payments() {
         </div>
         <div className="quick-stat" style={{ padding: '1.5rem' }}>
           <p className="quick-stat-label">Total Transactions</p>
-          <p className="quick-stat-value">{mockPayments.length}</p>
+          <p className="quick-stat-value">{payments.length}</p>
         </div>
         <div className="quick-stat" style={{ padding: '1.5rem' }}>
           <p className="quick-stat-label">Success Rate</p>
           <p className="quick-stat-value success">
-            {Math.round((mockPayments.filter((p) => p.status === 'Success').length / mockPayments.length) * 100)}%
+            {payments.length ? Math.round((payments.filter((p) => p.status === 'Success').length / payments.length) * 100) : 0}%
           </p>
         </div>
       </div>
@@ -107,7 +140,7 @@ export default function Payments() {
         <div className="card-content">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
             {['UPI', 'Credit Card', 'Debit Card', 'Net Banking'].map((method) => {
-              const count = mockPayments.filter((p) => p.paymentType === method).length;
+              const count = payments.filter((p) => p.paymentType === method).length;
               return (
                 <div key={method} className="payment-method-card">
                   <div className="payment-method-icon">
@@ -142,7 +175,7 @@ export default function Payments() {
               </thead>
               <tbody>
                 {filteredPayments.map((payment: Payment) => {
-                  const booking = mockBookings.find((b) => b.bid === payment.bid);
+                  const booking = bookings.find((b) => b.bid === payment.bid);
                   return (
                     <tr key={payment.pid}>
                       <td>{payment.pid}</td>

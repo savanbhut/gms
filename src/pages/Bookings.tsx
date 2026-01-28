@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import CustomerBookings from '@/pages/customer/Bookings';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockBookings } from '@/data/mockData';
+// import { mockBookings } from '@/data/mockData';
 import { Plus, Search } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
@@ -21,10 +22,52 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function Bookings() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]); // Use any for now or Booking type
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredBookings = mockBookings.filter((booking) => {
+  // Determine Role
+  const role = localStorage.getItem('userRole');
+  if (role === 'customer') return <CustomerBookings />;
+
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
+
+  // Fetch Bookings on Mount
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/bookings');
+      const data = await res.json();
+      setBookings(data);
+    } catch (error) {
+      console.error("Failed to fetch bookings");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (bid: number, newStatus: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${bid}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchBookings(); // Refresh
+      } else {
+        alert("Failed to update status");
+      }
+    } catch (err) {
+      alert("Error updating status");
+    }
+  };
+
+  const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
       booking.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.serviceName?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -33,11 +76,11 @@ export default function Bookings() {
   });
 
   const statusCounts = {
-    all: mockBookings.length,
-    Pending: mockBookings.filter((b) => b.status === 'Pending').length,
-    'In Progress': mockBookings.filter((b) => b.status === 'In Progress').length,
-    Completed: mockBookings.filter((b) => b.status === 'Completed').length,
-    Cancelled: mockBookings.filter((b) => b.status === 'Cancelled').length,
+    all: bookings.length,
+    Pending: bookings.filter((b) => b.status === 'Pending').length,
+    'In Progress': bookings.filter((b) => b.status === 'In Progress').length,
+    Completed: bookings.filter((b) => b.status === 'Completed').length,
+    Cancelled: bookings.filter((b) => b.status === 'Cancelled').length,
   };
 
   return (
@@ -50,7 +93,7 @@ export default function Bookings() {
             className={`btn ${statusFilter === status ? 'btn-primary' : 'btn-outline'} btn-sm`}
             onClick={() => setStatusFilter(status)}
           >
-            {status === 'all' ? 'All' : status} ({statusCounts[status]})
+            {status === 'all' ? 'All' : status} ({statusCounts[status] || 0})
           </button>
         ))}
       </div>
@@ -67,31 +110,8 @@ export default function Bookings() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="btn btn-primary" onClick={() => setIsDialogOpen(true)}>
-          <Plus style={{ width: '1rem', height: '1rem' }} />
-          New Booking
-        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="quick-stat">
-          <p className="quick-stat-label">Today's Bookings</p>
-          <p className="quick-stat-value">3</p>
-        </div>
-        <div className="stat-card-colored warning">
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)' }}>Pending</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-warning)' }}>{statusCounts.Pending}</p>
-        </div>
-        <div className="stat-card-colored info">
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-info)' }}>In Progress</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-info)' }}>{statusCounts['In Progress']}</p>
-        </div>
-        <div className="stat-card-colored success">
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-success)' }}>Completed</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-success)' }}>{statusCounts.Completed}</p>
-        </div>
-      </div>
 
       {/* Table */}
       <div className="card">
@@ -105,24 +125,51 @@ export default function Bookings() {
                   <th>Service</th>
                   <th>Date</th>
                   <th>Time</th>
-                  <th>Notes</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredBookings.map((booking: Booking) => (
+                {filteredBookings.map((booking: any) => (
                   <tr key={booking.bid}>
                     <td>{booking.bid}</td>
                     <td>{booking.customerName}</td>
                     <td>{booking.serviceName}</td>
-                    <td>{booking.date}</td>
+                    <td>{new Date(booking.date).toLocaleDateString()}</td>
                     <td>{booking.time}</td>
+                    <td><StatusBadge status={booking.status} /></td>
+
                     <td>
-                      <div className="line-clamp-1" style={{ maxWidth: '300px' }}>
-                        {booking.description}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {booking.status === 'Pending' && (
+                          <>
+                            <button
+                              className="btn btn-sm btn-success"
+                              style={{ backgroundColor: '#22c55e', color: 'white', border: 'none' }}
+                              onClick={() => handleUpdateStatus(booking.bid, 'Approved')}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="btn btn-sm btn-destructive"
+                              style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}
+                              onClick={() => handleUpdateStatus(booking.bid, 'Rejected')}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                        {booking.status === 'In Progress' && (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleUpdateStatus(booking.bid, 'Completed')}
+                          >
+                            Complete
+                          </button>
+                        )}
+
                       </div>
                     </td>
-                    <td><StatusBadge status={booking.status} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -132,54 +179,7 @@ export default function Bookings() {
       </div>
 
       {/* New Booking Dialog */}
-      {isDialogOpen && (
-        <div className="modal-overlay" onClick={() => setIsDialogOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Create New Booking</h3>
-              <p className="modal-description">Schedule a new service appointment</p>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="label">Customer</label>
-                <select className="select">
-                  <option value="">Select customer</option>
-                  <option value="1">Anil Gupta</option>
-                  <option value="2">Neha Sharma</option>
-                  <option value="3">Ravi Patel</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="label">Service</label>
-                <select className="select">
-                  <option value="">Select service</option>
-                  <option value="1">Oil Change - ₹1,500</option>
-                  <option value="2">Brake Service - ₹3,500</option>
-                  <option value="3">AC Service - ₹2,500</option>
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="label">Date</label>
-                  <input className="input" type="date" />
-                </div>
-                <div className="form-group">
-                  <label className="label">Time</label>
-                  <input className="input" type="time" />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="label">Notes</label>
-                <textarea className="textarea" placeholder="Any special requests or notes..." rows={3}></textarea>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setIsDialogOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => setIsDialogOpen(false)}>Create Booking</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </DashboardLayout>
+
+    </DashboardLayout >
   );
 }

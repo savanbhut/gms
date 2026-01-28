@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CustomerFeedback from '@/pages/customer/Feedback';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { mockFeedback } from '@/data/mockData';
 import { Search, Star, MessageSquare, ThumbsUp } from 'lucide-react';
@@ -21,6 +22,9 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function FeedbackPage() {
+  const role = localStorage.getItem('userRole');
+  if (role === 'customer') return <CustomerFeedback />;
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredFeedback = mockFeedback.filter((feedback) =>

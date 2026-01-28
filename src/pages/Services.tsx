@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CustomerServices from '@/pages/customer/Services';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { mockServices } from '@/data/mockData';
@@ -21,6 +22,9 @@ function StatusBadge({ status }: { status: string }) {
 export default function Services() {
   const [services, setServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const role = localStorage.getItem('userRole');
+  if (role === 'customer') return <CustomerServices />;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null); // For Edit Mode
   const [formData, setFormData] = useState<any>({});

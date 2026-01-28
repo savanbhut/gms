@@ -20,56 +20,69 @@ export default function Register() {
     address: ''
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+    // Clear error when user types
+    if (errors[id]) {
+      setErrors(prev => ({ ...prev, [id]: '' }));
+    }
+    if (errors.general) {
+      setErrors(prev => ({ ...prev, general: '' }));
+    }
   };
 
   const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
     // First Name & Last Name: String only (alphabets)
     const nameRegex = /^[A-Za-z]+$/;
-    if (!nameRegex.test(formData.firstName)) {
-      toast.error('First Name must contain only letters', { style: { color: 'red' } });
-      return false;
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+    } else if (!nameRegex.test(formData.firstName)) {
+      newErrors.firstName = 'First Name must contain only letters';
     }
-    if (!nameRegex.test(formData.lastName)) {
-      toast.error('Last Name must contain only letters', { style: { color: 'red' } });
-      return false;
+
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
+    } else if (!nameRegex.test(formData.lastName)) {
+      newErrors.lastName = 'Last Name must contain only letters';
     }
 
     // Phone: No longer than 10 digits
-    if (formData.phone.length > 10) {
-      toast.error('Phone number must not exceed 10 digits', { style: { color: 'red' } });
-      return false;
-    }
-    // Optional: Ensure it's numbers only for a phone
-    if (!/^\d+$/.test(formData.phone)) {
-      toast.error('Phone number must contain only digits', { style: { color: 'red' } });
-      return false;
+    if (!formData.phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (formData.phone.length > 10) {
+      newErrors.phone = 'Phone number must not exceed 10 digits';
+    } else if (!/^\d+$/.test(formData.phone)) {
+      newErrors.phone = 'Phone number must contain only digits';
     }
 
-    // Address: Must be string (non-empty check as input guarantees string)
+    // Address
     if (!formData.address.trim()) {
-      toast.error('Address is required', { style: { color: 'red' } });
-      return false;
+      newErrors.address = 'Address is required';
     }
 
     // Password: Min 10, 1 digit, 1 special char
-    if (formData.password.length < 10) {
-      toast.error('Password must be at least 10 characters long', { style: { color: 'red' } });
-      return false;
-    }
-    if (!/\d/.test(formData.password)) {
-      toast.error('Password must contain at least one digit', { style: { color: 'red' } });
-      return false;
-    }
-    // Special character check
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-      toast.error('Password must contain at least one special character', { style: { color: 'red' } });
-      return false;
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 10) {
+      newErrors.password = 'Password must be at least 10 characters long';
+    } else if (!/\d/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one digit';
+    } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one special character';
     }
 
-    return true;
+    // Email
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +93,7 @@ export default function Register() {
     }
 
     setIsLoading(true);
+    setErrors({}); // Clear previous errors
 
     try {
       const response = await fetch('http://localhost:5000/api/register', {
@@ -94,11 +108,11 @@ export default function Register() {
         toast.success('Registration successful! Please login.');
         navigate('/login');
       } else {
-        toast.error(data.message || 'Registration failed');
+        setErrors({ general: data.message || 'Registration failed' });
       }
     } catch (error) {
       console.error('Registration Error:', error);
-      toast.error('Server error. Is the backend running?');
+      setErrors({ general: 'Server error. Is the backend running?' });
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +143,11 @@ export default function Register() {
 
           <form onSubmit={handleSubmit}>
             <div className="card-content">
+              {errors.general && (
+                <div style={{ color: 'red', textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                  {errors.general}
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
@@ -139,11 +158,12 @@ export default function Register() {
                       id="firstName"
                       placeholder="John"
                       className="input input-with-icon"
-                      required
+                      // required // Removed HTML validation to show custom errors
                       value={formData.firstName}
                       onChange={handleChange}
                     />
                   </div>
+                  {errors.firstName && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.firstName}</span>}
                 </div>
                 <div className="form-group">
                   <label htmlFor="lastName" className="label">Last Name</label>
@@ -151,10 +171,11 @@ export default function Register() {
                     id="lastName"
                     placeholder="Doe"
                     className="input"
-                    required
+                    // required
                     value={formData.lastName}
                     onChange={handleChange}
                   />
+                  {errors.lastName && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.lastName}</span>}
                 </div>
               </div>
 
@@ -167,11 +188,12 @@ export default function Register() {
                     type="email"
                     placeholder="john@example.com"
                     className="input input-with-icon"
-                    required
+                    // required
                     value={formData.email}
                     onChange={handleChange}
                   />
                 </div>
+                {errors.email && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.email}</span>}
               </div>
 
               <div className="form-group">
@@ -183,11 +205,13 @@ export default function Register() {
                     type="tel"
                     placeholder="+91 9876543210"
                     className="input input-with-icon"
-                    required
+                    // required
                     value={formData.phone}
                     onChange={handleChange}
+                    maxLength={10}
                   />
                 </div>
+                {errors.phone && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.phone}</span>}
               </div>
 
               <div className="form-group">
@@ -199,7 +223,7 @@ export default function Register() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Create a strong password"
                     className="input input-with-icon input-with-right-icon"
-                    required
+                    // required
                     value={formData.password}
                     onChange={handleChange}
                   />
@@ -220,6 +244,7 @@ export default function Register() {
                     {showPassword ? <EyeOff style={{ width: '1rem', height: '1rem' }} /> : <Eye style={{ width: '1rem', height: '1rem' }} />}
                   </button>
                 </div>
+                {errors.password && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.password}</span>}
               </div>
 
               <div className="form-group">
@@ -228,10 +253,11 @@ export default function Register() {
                   id="address"
                   placeholder="Enter your address"
                   className="input"
-                  required
+                  // required
                   value={formData.address}
                   onChange={handleChange}
                 />
+                {errors.address && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.address}</span>}
               </div>
             </div>
 

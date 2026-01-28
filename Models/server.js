@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 // Import all models
 const { GarageList, Garage, User, Staff, Customer, Service, Booking, BookedService, Payment, Feedback } = require('./model');
 
@@ -147,6 +148,136 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// --- FORGOT PASSWORD APIs ---
+
+// 1. Forgot Password - Generate & Send OTP
+app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.json({ success: false, message: "Email not found" });
+        }
+
+        // Generate 6 digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const { OTP } = require('./model');
+
+        await OTP.findOneAndUpdate(
+            { email },
+            { otp, createdAt: new Date() },
+            { upsert: true, new: true }
+        );
+
+        // Send Email using Nodemailer
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'savanbhut56@gmail.com',
+                pass: 'mdebaiksrpqkdtcr'
+            }
+        });
+
+        const mailOptions = {
+            from: 'savanbhut56@gmail.com',
+            to: email,
+            subject: 'Garage Hub - Password Reset OTP',
+            text: `Your OTP for password reset is: ${otp}`
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Email Error:", error);
+                // We still fail gracefully if email fails, or return error? 
+                // User wants it to come in mail, so if it fails, we should probably tell them.
+                return res.status(500).json({ success: false, message: "Failed to send email" });
+            } else {
+                console.log('Email sent: ' + info.response);
+                res.json({ success: true, message: "OTP sent to your email" });
+            }
+        });
+
+    } catch (err) {
+        console.error("Forgot Password Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// 2. Verify OTP
+app.post('/api/auth/verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const { OTP } = require('./model');
+
+        const record = await OTP.findOne({ email, otp });
+
+        if (record) {
+            res.json({ success: true, message: "OTP Verified" });
+        } else {
+            res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+    } catch (err) {
+        console.error("Verify OTP Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// 3. Reset Password
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        const { OTP } = require('./model');
+
+        // Double check OTP valid
+        const record = await OTP.findOne({ email, otp });
+        if (!record) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        // Update Password
+        // In real app: Hash password
+        await User.updateOne({ email }, { $set: { password: newPassword } });
+
+        // Delete used OTP
+        await OTP.deleteOne({ email });
+
+        res.json({ success: true, message: "Password changed successfully" });
+    } catch (err) {
+        console.error("Reset Password Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// 4. Change Password (Logged In)
+app.post('/api/auth/change-password', async (req, res) => {
+    try {
+        const { uid, currentPassword, newPassword } = req.body;
+
+        // Find user by UID (assuming uid is unique enough for this mock set up, or email)
+        // Since we store uid in localStorage, we use that.
+        const user = await User.findOne({ uid });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Verify current password (Simple string comparison for verified mock)
+        if (user.password !== currentPassword) {
+            return res.status(400).json({ success: false, message: "Incorrect current password" });
+        }
+
+        // Update to new password
+        await User.updateOne({ uid }, { $set: { password: newPassword } });
+
+        res.json({ success: true, message: "Password updated successfully" });
+    } catch (err) {
+        console.error("Change Password Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
 // --- Other API Placeholders ---
 
 // --- GARAGE APIs ---
@@ -206,39 +337,61 @@ app.get('/api/services', async (req, res) => {
 
 // --- BOOKING APIs ---
 
+// Get ALL Bookings (Admin/Manager)
+app.get('/api/bookings', async (req, res) => {
+    try {
+        // Fetch all bookings
+        const bookings = await Booking.find({});
+
+        // We need to join with Customer and Service details to make it useful
+        // For MVP Mongoose without populate setup, we might stick to basic fetch
+        // But the frontend expects customerName, serviceName.
+        // Let's do a manual aggregation or just return IDs and let frontend handle? 
+        // Better: Enrich the data server-side for the Table.
+
+        const enrichedBookings = await Promise.all(bookings.map(async (b) => {
+            const customer = await Customer.findOne({ cid: b.cid });
+            // For Service Name, we simply check the description or fetch BookedService
+            // The booking.description field has "Services: Name..." as per my logic in POST /bookings
+            // So we can use that or fetch. Let's use the description for display speed.
+
+            return {
+                ...b.toObject(),
+                id: b.bid, // Map bid to id for consistency if needed
+                customerName: customer ? customer.name : 'Unknown',
+                serviceName: b.description || 'Service', // Simplified
+            };
+        }));
+
+        res.json(enrichedBookings);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching bookings" });
+    }
+});
+
 // Get Bookings for a User
 app.get('/api/bookings/:uid', async (req, res) => {
     try {
         // Find bookings where the Customer's UID matches
-        // First get the CID for this UID
         const customer = await Customer.findOne({ uid: req.params.uid });
-        if (!customer) return res.json([]); // No customer profile yet
+        if (!customer) return res.json([]);
 
-        // Fetch bookings for this CID
-        // We might want to populate Service details to show names
-        // But our Booking schema just has GID, CID. 
-        // Wait, checking schema... BookingSchema has gid, cid, date, status, description, time.
-        // It does NOT have 'service_name'. 
-        // USUALLY a booking is for a SPECIFIC service (or multiple). 
-        // The dictionary has a 'Booked_Services_Tbl' for that.
-        // For simplified "Flipkart" flow where you "Book a Service", we often just link standard Booking -> Service directly 
-        // OR we must create entries in both Booking logic.
-        // Let's assume for this "Book Now" flow, we create a Booking AND a BookedService, 
-        // OR we simplify and say a Booking has a 'service_id' or 'service_name' embedded for this MVP if the schema allows,
-        // BUT we must follow the schema: Booking -> BookedService.
-
-        // For simplicity in this step, I will fetch Bookings and maybe simplistic join or just show basic info.
-        // Actually, let's update proper retrieval:
         const bookings = await Booking.find({ cid: customer.cid });
 
-        // To show Service Name, we need the linked BookedService. 
-        // This is getting complex for a simple "flipkart view".
-        // I will do a clear simplified approach: 
-        // On POST /bookings, I will create Booking + BookedService.
-        // On GET /bookings, I will try to fetch details.
+        // Enrich bookings with total cost from BookedService
+        const enrichedBookings = await Promise.all(bookings.map(async (b) => {
+            const bookedServices = await BookedService.find({ bid: b.bid });
+            const totalCost = bookedServices.reduce((sum, bs) => sum + bs.cost, 0);
 
-        res.json(bookings);
+            return {
+                ...b.toObject(),
+                totalCost: totalCost || 0 // Default to 0, or logic to fetch from Service if missing
+            };
+        }));
+
+        res.json(enrichedBookings);
     } catch (err) {
+        console.error("Error fetching customer bookings:", err);
         res.status(500).json({ message: "Error fetching bookings" });
     }
 });
@@ -310,6 +463,30 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
+// Update Booking Status (Approve/Reject/Complete)
+app.put('/api/bookings/:bid/status', async (req, res) => {
+    try {
+        const bid = parseInt(req.params.bid);
+        const { status } = req.body; // Approved, Rejected, Completed
+
+        const validStatuses = ['Pending', 'Approved', 'Rejected', 'Confirmed', 'Completed', 'Cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: "Invalid status" });
+        }
+
+        const result = await Booking.updateOne({ bid }, { $set: { status } });
+
+        if (result.matchedCount > 0) {
+            res.json({ success: true, message: `Booking marked as ${status}` });
+        } else {
+            res.status(404).json({ success: false, message: "Booking not found" });
+        }
+    } catch (err) {
+        console.error("Update Booking Status Error:", err);
+        res.status(500).json({ success: false, message: "Error updating booking status" });
+    }
+});
+
 // Seed Services (Helper to populate DB)
 // Seed Services (Helper to populate DB)
 app.post('/api/seed', async (req, res) => {
@@ -320,7 +497,7 @@ app.post('/api/seed', async (req, res) => {
             garageList = new GarageList({
                 glid: 1,
                 garage_name: 'Main HQ',
-                owner_name: 'Super Admin',
+                owner_name: 'Admin',
                 phone: '9999999999',
                 uid: 99999, // Dummy Admin UID
                 password: 'admin',
@@ -336,8 +513,8 @@ app.post('/api/seed', async (req, res) => {
         if (!adminUser) {
             adminUser = new User({
                 uid: 1001, // Specific UID for this admin
-                f_name: 'Super',
-                l_name: 'Admin',
+                f_name: 'Admin',
+                l_name: '',
                 email: adminEmail,
                 password: 'GarageAdmin@2026', // Updated to avoid browser warnings
                 address: 'HQ Address',
@@ -438,6 +615,12 @@ app.post('/api/payments', async (req, res) => {
             return res.status(400).json({ success: false, message: "Booking already paid" });
         }
 
+        // Check if status is Approved
+        const booking = await Booking.findOne({ bid });
+        if (!booking || booking.status !== 'Approved') {
+            return res.status(400).json({ success: false, message: "Booking must be Approved by Admin before payment" });
+        }
+
         const pid = Math.floor(Math.random() * 1000000);
         const newPayment = new Payment({
             pid,
@@ -457,6 +640,28 @@ app.post('/api/payments', async (req, res) => {
     } catch (err) {
         console.error("DEBUG: Payment Error:", err);
         res.status(500).json({ success: false, message: "Payment failed" });
+    }
+});
+
+// Get ALL Payments (Admin)
+app.get('/api/payments', async (req, res) => {
+    try {
+        const payments = await Payment.find({});
+        res.json(payments);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching payments" });
+    }
+});
+
+// --- CUSTOMER APIs ---
+
+// Get ALL Customers
+app.get('/api/customers', async (req, res) => {
+    try {
+        const customers = await Customer.find({});
+        res.json(customers);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching customers" });
     }
 });
 

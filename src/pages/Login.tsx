@@ -13,15 +13,28 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
+    const newErrors: Record<string, string> = {};
+
+    if (!email) {
+      newErrors.email = 'Email is required';
+    }
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
     setIsLoading(true);
+    setErrors({});
 
     // Simulate API call and Auto-detect Role
     try {
@@ -42,11 +55,11 @@ export default function Login() {
         toast.success(`Login successful as ${data.user.role}!`);
         navigate('/dashboard');
       } else {
-        toast.error(data.message || 'Invalid Credentials');
+        setErrors({ general: data.message || 'Invalid Credentials' });
       }
     } catch (error) {
       console.error('Login Error:', error);
-      toast.error('Server error. Is the backend running?');
+      setErrors({ general: 'Server error. Is the backend running?' });
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +95,11 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <div className="card-content">
+              {errors.general && (
+                <div style={{ color: 'red', textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                  {errors.general}
+                </div>
+              )}
 
               {/* Role Dropdown Removed - Auto-detected */}
 
@@ -95,10 +113,15 @@ export default function Login() {
                     placeholder="admin@garage.com"
                     className="input input-with-icon"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                      if (errors.general) setErrors(prev => ({ ...prev, general: '' }));
+                    }}
+                  // required
                   />
                 </div>
+                {errors.email && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.email}</span>}
               </div>
 
               <div className="form-group">
@@ -111,8 +134,12 @@ export default function Login() {
                     placeholder="Enter your password"
                     className="input input-with-icon input-with-right-icon"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+                      if (errors.general) setErrors(prev => ({ ...prev, general: '' }));
+                    }}
+                  // required
                   />
                   <button
                     type="button"
@@ -131,6 +158,7 @@ export default function Login() {
                     {showPassword ? <EyeOff style={{ width: '1rem', height: '1rem' }} /> : <Eye style={{ width: '1rem', height: '1rem' }} />}
                   </button>
                 </div>
+                {errors.password && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.password}</span>}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>

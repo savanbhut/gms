@@ -1,5 +1,5 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { dashboardStats, mockBookings, mockFeedback } from '@/data/mockData';
+import { dashboardStats, mockFeedback } from '@/data/mockData';
 import { CalendarDays, Users, Clock, CheckCircle, TrendingUp, Star } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
@@ -67,13 +67,20 @@ export default function Dashboard() {
   const userRole = localStorage.getItem('userRole');
   const [garageDetails, setGarageDetails] = useState<any>(null);
   const [isEditGarageOpen, setIsEditGarageOpen] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch Garage Details (Assuming GID 1 for single admin for now)
+    // Fetch Garage Details
     fetch('http://localhost:5000/api/garage/1')
       .then(res => res.json())
       .then(data => setGarageDetails(data))
       .catch(err => console.error("Failed to fetch garage details", err));
+
+    // Fetch Bookings
+    fetch('http://localhost:5000/api/bookings')
+      .then(res => res.json())
+      .then(data => setBookings(data))
+      .catch(err => console.error("Failed to fetch bookings", err));
   }, []);
 
   const handleSaveGarage = async () => {
@@ -228,7 +235,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockBookings.slice(0, 4).map((booking: Booking) => (
+                  {bookings.slice(0, 4).map((booking: Booking) => (
                     <tr key={booking.bid}>
                       <td>{booking.customerName}</td>
                       <td>{booking.serviceName}</td>

@@ -4,6 +4,13 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 // Import all models
 const { GarageList, Garage, User, Staff, Customer, Service, Booking, BookedService, Payment, Feedback } = require('./model');
+const Razorpay = require('razorpay');
+
+// Razorpay Instance
+const razorpay = new Razorpay({
+    key_id: 'rzp_test_RTQIz97y5TkM1p',
+    key_secret: 'ZeYyRu2kNttTTQewjVrAVYDe'
+});
 
 const app = express();
 app.use(cors());
@@ -275,6 +282,102 @@ app.post('/api/auth/change-password', async (req, res) => {
     } catch (err) {
         console.error("Change Password Error:", err);
         res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// 5. Get User Profile
+app.get('/api/profile/:uid', async (req, res) => {
+    try {
+        const uid = parseInt(req.params.uid);
+        const user = await User.findOne({ uid });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        let profileData = {
+            uid: user.uid,
+            firstName: user.f_name,
+            lastName: user.l_name,
+            email: user.email,
+            phone: '', // Will fetch from Role table
+            address: user.address,
+            role: user.user_type
+        };
+
+        // Fetch additional details based on role
+        if (user.user_type === 'customer') {
+            const customer = await Customer.findOne({ uid });
+            if (customer) {
+                profileData.phone = customer.phone;
+                profileData.address = customer.address || user.address;
+            }
+        } else if (['admin', 'manager', 'mechanic'].includes(user.user_type)) {
+            // For staff/admin, phone might be in Staff table or GarageList if super admin
+            // Simplification: Try to find in Staff table if not admin/owner
+            // If Admin/Owner, maybe in GarageList or Garage
+            // For this specific request "savan bhut", he is likely a customer or admin. 
+            // Let's check Staff table for completeness if needed, or just return what we have in User.
+            // User table doesn't have phone in schema, but Customer/Staff/Garage do.
+            // Let's try finding in Staff
+            const staff = await Staff.findOne({ email: user.email });
+            if (staff) {
+                profileData.phone = staff.phone;
+            } else {
+                // Try GarageList for Admin
+                const owner = await GarageList.findOne({ uid });
+                if (owner) profileData.phone = owner.phone;
+            }
+        }
+
+        res.json({ success: true, profile: profileData });
+
+    } catch (err) {
+        console.error("Get Profile Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching profile" });
+    }
+});
+
+// 6. Update User Profile
+app.put('/api/profile/:uid', async (req, res) => {
+    try {
+        const uid = parseInt(req.params.uid);
+        const { firstName, lastName, phone, address, email } = req.body;
+
+        const user = await User.findOne({ uid });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // 1. Update User Table
+        await User.updateOne({ uid }, {
+            $set: {
+                f_name: firstName,
+                l_name: lastName,
+                // email: email, // Email update is tricky as it's a key, let's allow it but check unique
+                address: address
+            }
+        });
+
+        // 2. Update Role Specific Table
+        if (user.user_type === 'customer') {
+            await Customer.updateOne({ uid }, {
+                $set: {
+                    name: `${firstName} ${lastName}`,
+                    phone: phone,
+                    address: address,
+                    // email: email
+                }
+            });
+        }
+
+        // Note: For real app, handle email uniqueness check if changing email
+
+        res.json({ success: true, message: "Profile updated successfully" });
+
+    } catch (err) {
+        console.error("Update Profile Error:", err);
+        res.status(500).json({ success: false, message: "Error updating profile" });
     }
 });
 
@@ -604,43 +707,73 @@ app.get('/api/payments/:uid', async (req, res) => {
     }
 });
 
-app.post('/api/payments', async (req, res) => {
-    console.log("DEBUG: Payment Request:", req.body);
+app.post('/api/payments/create-order', async (req, res) => {
     try {
-        const { uid, bid, amount, paymentMethod } = req.body;
-
-        // Check if already paid
-        const existingPayment = await Payment.findOne({ bid, status: 'Success' });
-        if (existingPayment) {
-            return res.status(400).json({ success: false, message: "Booking already paid" });
-        }
-
-        // Check if status is Approved
-        const booking = await Booking.findOne({ bid });
-        if (!booking || booking.status !== 'Approved') {
-            return res.status(400).json({ success: false, message: "Booking must be Approved by Admin before payment" });
-        }
-
-        const pid = Math.floor(Math.random() * 1000000);
-        const newPayment = new Payment({
-            pid,
-            payment_type: paymentMethod || 'Card',
-            bid,
-            amount,
-            date: new Date(),
-            status: 'Success',
-            transaction_id: `TXN${Math.floor(Math.random() * 10000000)}`
+        const { amount } = req.body;
+        const options = {
+            amount: amount * 100, // Amount in paise
+            currency: "INR",
+            receipt: `receipt_${Date.now()}`
+        };
+        const order = await razorpay.orders.create(options);
+        res.json({
+            success: true,
+            order_id: order.id,
+            amount: order.amount,
+            key_id: 'rzp_test_RTQIz97y5TkM1p'
         });
-        await newPayment.save();
-
-        // Update Booking Status to Confirmed
-        await Booking.updateOne({ bid }, { status: 'Confirmed' });
-
-        res.json({ success: true, message: "Payment successful!" });
-    } catch (err) {
-        console.error("DEBUG: Payment Error:", err);
-        res.status(500).json({ success: false, message: "Payment failed" });
+    } catch (error) {
+        console.error("Razorpay Order Error:", error);
+        res.status(500).json({ success: false, message: "Order creation failed" });
     }
+});
+
+app.post('/api/payments/verify', async (req, res) => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bid, uid, amount } = req.body;
+
+        const crypto = require('crypto');
+        const generated_signature = crypto.createHmac('sha256', 'ZeYyRu2kNttTTQewjVrAVYDe')
+            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .digest('hex');
+
+        if (generated_signature === razorpay_signature) {
+            // Payment Successful
+            const pid = Math.floor(Math.random() * 1000000);
+            const newPayment = new Payment({
+                pid,
+                payment_type: 'Razorpay', // Or 'Card'/'UPI' if we can extract form RZP response
+                bid,
+                amount,
+                date: new Date(),
+                status: 'Success',
+                transaction_id: razorpay_payment_id
+            });
+            await newPayment.save();
+
+            // Update Booking
+            await Booking.updateOne({ bid }, { status: 'Confirmed' });
+
+            res.json({ success: true, message: "Payment verified successfully" });
+        } else {
+            res.status(400).json({ success: false, message: "Invalid signature" });
+        }
+    } catch (err) {
+        console.error("Payment Verification Error:", err);
+        res.status(500).json({ success: false, message: "Verification failed" });
+    }
+});
+
+// Old endpoint - kept for compatibility if needed or deprecate? 
+// User asked for "Razorpay in payment", replacing the old mock flow effectively.
+// I will keep the old "/api/payments" simple or remove it if frontend changes completely. 
+// For now, I'll comment it out or leave it as legacy if I change frontend to use the new route.
+// Let's replace the old simple POST /api/payments with a "Mock Card" one if they still want it,
+// but the plan is to use Razorpay.
+// I will remove the old logic for clarity as the plan implies replacing "mock payment system".
+// But I'll leave a stub in case some old code calls it.
+app.post('/api/payments', async (req, res) => {
+    res.status(400).json({ success: false, message: "Please use Razorpay checkout." });
 });
 
 // Get ALL Payments (Admin)

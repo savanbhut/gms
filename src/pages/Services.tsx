@@ -28,6 +28,7 @@ export default function Services() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null); // For Edit Mode
   const [formData, setFormData] = useState<any>({});
+  const [errors, setErrors] = useState<any>({});
 
   // Fetch Services from Backend
   const fetchServices = async () => {
@@ -47,26 +48,51 @@ export default function Services() {
   const handleEditClick = (service: any) => {
     setEditingService(service);
     setFormData({ ...service });
+    setErrors({});
     setIsDialogOpen(true);
   };
 
   const handleSaveService = async () => {
-    if (!editingService) return; // Only handling edit for now
+    // Validation
+    const newErrors: any = {};
+    let isValid = true;
+
+    if (!formData.service_name?.trim()) { newErrors.service_name = "Service Name is required"; isValid = false; }
+    if (!formData.vehicle_type) { newErrors.vehicle_type = "Vehicle Type is required"; isValid = false; }
+    if (!formData.price) { newErrors.price = "Price is required"; isValid = false; }
+    if (!formData.duration?.trim()) { newErrors.duration = "Duration is required"; isValid = false; }
+    if (!formData.description?.trim()) { newErrors.description = "Description is required"; isValid = false; }
+
+    setErrors(newErrors);
+
+    if (!isValid) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/services/${editingService.sid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      let res;
+      if (editingService) {
+        // Update existing service
+        res = await fetch(`http://localhost:5000/api/services/${editingService.sid}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+      } else {
+        // Add new service
+        res = await fetch('http://localhost:5000/api/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+      }
+
       const data = await res.json();
       if (data.success) {
-        toast.success('Service updated!');
+        toast.success(editingService ? 'Service updated!' : 'Service added successfully');
         setIsDialogOpen(false);
         setEditingService(null);
         fetchServices(); // Refresh list
       } else {
-        toast.error(data.message || 'Update failed');
+        toast.error(data.message || 'Operation failed');
       }
     } catch (err) {
       toast.error('Server error');
@@ -97,7 +123,7 @@ export default function Services() {
         </div>
         {/* Hide Add button for now or keep mock */}
         {['admin', 'manager'].includes(localStorage.getItem('userRole') || '') && (
-          <button className="btn btn-primary" onClick={() => { setEditingService(null); setFormData({}); setIsDialogOpen(true); }}>
+          <button className="btn btn-primary" onClick={() => { setEditingService(null); setFormData({}); setErrors({}); setIsDialogOpen(true); }}>
             <Plus style={{ width: '1rem', height: '1rem' }} />
             Add Service
           </button>
@@ -163,51 +189,56 @@ export default function Services() {
               <div className="form-group">
                 <label className="label">Service Name</label>
                 <input
-                  className="input"
+                  className={`input ${errors.service_name ? 'input-error' : ''}`}
                   value={formData.service_name || ''}
                   onChange={(e) => setFormData({ ...formData, service_name: e.target.value })}
                 />
+                {errors.service_name && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.service_name}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="label">Vehicle Type</label>
                   <select
-                    className="select"
+                    className={`select ${errors.vehicle_type ? 'input-error' : ''}`}
                     value={formData.vehicle_type || ''}
                     onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
                   >
                     <option value="">Select</option>
                     <option value="Car">Car</option>
                     <option value="Bike">Bike</option>
-                    <option value="Truck">Truck</option>
+                    <option value="General">General</option>
                   </select>
+                  {errors.vehicle_type && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.vehicle_type}</span>}
                 </div>
                 <div className="form-group">
                   <label className="label">Price (₹)</label>
                   <input
-                    className="input"
+                    className={`input ${errors.price ? 'input-error' : ''}`}
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                   />
+                  {errors.price && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.price}</span>}
                 </div>
               </div>
               <div className="form-group">
                 <label className="label">Duration</label>
                 <input
-                  className="input"
+                  className={`input ${errors.duration ? 'input-error' : ''}`}
                   value={formData.duration || ''}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 />
+                {errors.duration && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.duration}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Description</label>
                 <textarea
-                  className="textarea"
+                  className={`textarea ${errors.description ? 'input-error' : ''}`}
                   rows={3}
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 ></textarea>
+                {errors.description && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.description}</span>}
               </div>
               {editingService && (
                 <div className="form-group">

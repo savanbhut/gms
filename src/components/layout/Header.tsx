@@ -1,4 +1,6 @@
+import React from 'react';
 import { Bell, Search } from 'lucide-react';
+import { ProfileDialog } from './ProfileDialog';
 import '../../styles/layout.css';
 import '../../styles/components.css';
 
@@ -8,6 +10,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   return (
     <header className="header">
@@ -18,16 +21,7 @@ export function Header({ title, subtitle }: HeaderProps) {
 
       <div className="header-actions">
         {/* Search */}
-        <div className="header-search">
-          <div className="search-wrapper">
-            <Search />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="input"
-            />
-          </div>
-        </div>
+
 
         {/* Notifications */}
         <button className="btn btn-ghost btn-icon notification-btn">
@@ -35,14 +29,25 @@ export function Header({ title, subtitle }: HeaderProps) {
           <span className="notification-dot" />
         </button>
 
-        {/* Profile (Static) */}
-        <div className="header-user">
+        {/* Profile (Clickable) */}
+        <div
+          className="header-user clickable"
+          onClick={() => setIsProfileOpen(true)}
+          title="Edit Profile"
+          style={{ cursor: 'pointer' }}
+        >
           <div className="avatar">{(localStorage.getItem('userName') || 'U')[0]}</div>
           <div className="header-user-info">
             <p>{localStorage.getItem('userName') || 'User'}</p>
           </div>
         </div>
       </div>
+
+      {/* Profile Dialog */}
+      <ProfileDialog
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
     </header>
   );
 }

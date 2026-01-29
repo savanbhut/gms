@@ -23,6 +23,7 @@ export default function Garages() {
   const [garage, setGarage] = useState<any>(null); // Single garage for Admin
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [errors, setErrors] = useState<any>({});
 
   // Fetch Garage Details (Hardcoded GID 1 for single Admin)
   useEffect(() => {
@@ -36,10 +37,38 @@ export default function Garages() {
 
   const handleEditClick = () => {
     setFormData({ ...garage });
+    setErrors({});
     setIsEditOpen(true);
   };
 
   const handleSaveGarage = async () => {
+    // Validation
+    const { g_name, owner_name, phone, pincode, email, address } = formData;
+    const newErrors: any = {};
+    let isValid = true;
+
+    if (!g_name?.trim()) { newErrors.g_name = "Garage Name is required"; isValid = false; }
+    if (!owner_name?.trim()) { newErrors.owner_name = "Owner Name is required"; isValid = false; }
+    if (!pincode) { newErrors.pincode = "Pincode is required"; isValid = false; }
+    if (!email?.trim()) { newErrors.email = "Email is required"; isValid = false; }
+    if (!address?.trim()) { newErrors.address = "Address is required"; isValid = false; }
+
+    // Phone Validation
+    if (!phone) {
+      newErrors.phone = "Phone is required";
+      isValid = false;
+    } else if (!/^\d{10}$/.test(String(phone))) {
+      newErrors.phone = "Phone must be exactly 10 digits";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      toast.error("Please fix the errors");
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:5000/api/garage/${garage.gid}`, {
         method: 'PUT',
@@ -66,7 +95,7 @@ export default function Garages() {
   );
 
   return (
-    <DashboardLayout title="Garages" subtitle="Manage registered garages">
+    <DashboardLayout title="Garage" subtitle="Manage registered garage">
 
 
 
@@ -177,52 +206,58 @@ export default function Garages() {
               <div className="form-group">
                 <label className="label">Garage Name</label>
                 <input
-                  className="input"
+                  className={`input ${errors.g_name ? 'input-error' : ''}`}
                   value={formData.g_name || ''}
                   onChange={(e) => setFormData({ ...formData, g_name: e.target.value })}
                 />
+                {errors.g_name && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.g_name}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Owner Name</label>
                 <input
-                  className="input"
+                  className={`input ${errors.owner_name ? 'input-error' : ''}`}
                   value={formData.owner_name || ''}
                   onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
                 />
+                {errors.owner_name && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.owner_name}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="label">Phone</label>
                   <input
-                    className="input"
+                    className={`input ${errors.phone ? 'input-error' : ''}`}
                     value={formData.phone || ''}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />
+                  {errors.phone && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.phone}</span>}
                 </div>
                 <div className="form-group">
                   <label className="label">Pincode</label>
                   <input
-                    className="input"
+                    className={`input ${errors.pincode ? 'input-error' : ''}`}
                     value={formData.pincode || ''}
                     onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                   />
+                  {errors.pincode && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.pincode}</span>}
                 </div>
               </div>
               <div className="form-group">
                 <label className="label">Email</label>
                 <input
-                  className="input"
+                  className={`input ${errors.email ? 'input-error' : ''}`}
                   value={formData.email || ''}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
+                {errors.email && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.email}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Address</label>
                 <input
-                  className="input"
+                  className={`input ${errors.address ? 'input-error' : ''}`}
                   value={formData.address || ''}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
+                {errors.address && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.address}</span>}
               </div>
             </div>
             <div className="modal-footer">

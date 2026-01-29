@@ -392,7 +392,8 @@
   animation: fadeIn 0.2s ease;
 }
 
-.modal {
+.modal,
+.modal-content {
   background-color: var(--color-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
@@ -401,6 +402,7 @@
   max-height: 85vh;
   overflow-y: auto;
   animation: fadeIn 0.3s ease;
+  z-index: 51; /* Ensure content is above overlay */
 }
 
 .modal-header {

@@ -43,25 +43,98 @@ export default function CustomerBookings() {
         setShowPaymentModal(true);
     };
 
+    const loadScript = (src: string) => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const handlePaymentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedBooking) return;
         setIsLoading(true);
+
+        const res = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+        if (!res) {
+            toast.error('Razorpay SDK failed to load. Are you online?');
+            setIsLoading(false);
+            return;
+        }
+
         try {
+            // 1. Create Order
             const amount = selectedBooking.totalCost || 0;
-            const res = await fetch('http://localhost:5000/api/payments', {
+            const orderRes = await fetch('http://localhost:5000/api/payments/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: userUid, bid: selectedBooking.bid, amount, paymentMethod: 'Credit Card' })
+                body: JSON.stringify({ amount })
             });
-            const data = await res.json();
-            if (data.success) {
-                toast.success("Payment Received!");
-                setShowPaymentModal(false);
-                fetchBookings(); // Update status
-            } else { toast.error(data.message); }
-        } catch (err) { toast.error("Payment Error"); }
-        finally { setIsLoading(false); }
+            const orderData = await orderRes.json();
+
+            if (!orderData.success) {
+                toast.error("Order creation failed");
+                setIsLoading(false);
+                return;
+            }
+
+            // 2. Open Razorpay
+            const options = {
+                key: orderData.key_id,
+                amount: orderData.amount,
+                currency: "INR",
+                name: "Garage Hub",
+                description: `Payment for Booking #${selectedBooking.bid}`,
+                order_id: orderData.order_id,
+                handler: async function (response: any) {
+                    // 3. Verify Payment
+                    try {
+                        const verifyRes = await fetch('http://localhost:5000/api/payments/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                bid: selectedBooking.bid,
+                                uid: userUid,
+                                amount: amount
+                            })
+                        });
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyData.success) {
+                            toast.success("Payment Successful!");
+                            setShowPaymentModal(false);
+                            fetchBookings();
+                        } else {
+                            toast.error("Payment Verification Failed");
+                        }
+                    } catch (err) {
+                        toast.error("Server error during verification");
+                    }
+                },
+                prefill: {
+                    name: "Customer Name", // Could be dynamic
+                    email: "customer@example.com",
+                    contact: "9999999999"
+                },
+                theme: {
+                    color: "#3399cc"
+                }
+            };
+
+            const paymentObject = new (window as any).Razorpay(options);
+            paymentObject.open();
+
+        } catch (err) {
+            toast.error("Payment initiation failed");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleFeedbackSubmit = async (e: React.FormEvent) => {
@@ -169,10 +242,8 @@ export default function CustomerBookings() {
                                 <div className="card" style={{ padding: '1rem', backgroundColor: '#f8fafc', marginBottom: '1rem' }}>
                                     <p>Total Amount: <strong>₹{selectedBooking.totalCost?.toLocaleString() || 0}</strong></p>
                                 </div>
-                                <div className="form-group"><label className="label">Card Number</label><input type="text" className="input" placeholder="0000 0000 0000 0000" required /></div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div className="form-group"><label className="label">Expiry</label><input type="text" className="input" placeholder="MM/YY" required /></div>
-                                    <div className="form-group"><label className="label">CVV</label><input type="text" className="input" placeholder="123" required /></div>
+                                <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--color-muted-foreground)' }}>
+                                    <p>Secure payment via Razorpay</p>
                                 </div>
                             </div>
                             <div className="modal-footer">

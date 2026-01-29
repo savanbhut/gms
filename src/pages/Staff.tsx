@@ -47,6 +47,7 @@ export default function StaffPage() {
     education: '',
     address: ''
   });
+  const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
     fetchStaff();
@@ -65,13 +66,33 @@ export default function StaffPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear error when user types
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
   };
 
   const handleSubmit = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.role || !formData.phone || !formData.email || !formData.salary) {
-      toast.error("Please fill all required fields");
-      return;
+    const newErrors: any = {};
+    let isValid = true;
+
+    if (!formData.firstName.trim()) { newErrors.firstName = "First name is required"; isValid = false; }
+    if (!formData.lastName.trim()) { newErrors.lastName = "Last name is required"; isValid = false; }
+    if (!formData.role) { newErrors.role = "Role is required"; isValid = false; }
+    if (!formData.email.trim()) { newErrors.email = "Email is required"; isValid = false; }
+    if (!formData.salary) { newErrors.salary = "Salary is required"; isValid = false; }
+
+    if (!formData.phone) {
+      newErrors.phone = "Phone is required";
+      isValid = false;
+    } else if (!/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = "Phone must be exactly 10 digits";
+      isValid = false;
     }
+
+    setErrors(newErrors);
+
+    if (!isValid) return;
 
     setIsLoading(true);
     try {
@@ -117,7 +138,7 @@ export default function StaffPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="btn btn-primary" onClick={() => setIsDialogOpen(true)}>
+        <button className="btn btn-primary" onClick={() => { setIsDialogOpen(true); setErrors({}); }}>
           <Plus style={{ width: '1rem', height: '1rem' }} />
           Add Staff
         </button>
@@ -192,36 +213,42 @@ export default function StaffPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="label">First Name *</label>
-                  <input name="firstName" className="input" placeholder="First name" value={formData.firstName} onChange={handleChange} />
+                  <input name="firstName" className={`input ${errors.firstName ? 'input-error' : ''}`} placeholder="First name" value={formData.firstName} onChange={handleChange} />
+                  {errors.firstName && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.firstName}</span>}
                 </div>
                 <div className="form-group">
                   <label className="label">Last Name *</label>
-                  <input name="lastName" className="input" placeholder="Last name" value={formData.lastName} onChange={handleChange} />
+                  <input name="lastName" className={`input ${errors.lastName ? 'input-error' : ''}`} placeholder="Last name" value={formData.lastName} onChange={handleChange} />
+                  {errors.lastName && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.lastName}</span>}
                 </div>
               </div>
               <div className="form-group">
                 <label className="label">Role *</label>
-                <select name="role" className="select" value={formData.role} onChange={handleChange}>
+                <select name="role" className={`select ${errors.role ? 'input-error' : ''}`} value={formData.role} onChange={handleChange}>
                   <option value="">Select role</option>
                   <option value="Mechanic">Mechanic</option>
                   <option value="Senior Mechanic">Senior Mechanic</option>
                   <option value="Receptionist">Receptionist</option>
                   <option value="Manager">Manager</option>
                 </select>
+                {errors.role && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.role}</span>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="label">Phone *</label>
-                  <input name="phone" className="input" placeholder="10 digit number" maxLength={10} value={formData.phone} onChange={handleChange} />
+                  <input name="phone" className={`input ${errors.phone ? 'input-error' : ''}`} placeholder="10 digit number" maxLength={10} value={formData.phone} onChange={handleChange} />
+                  {errors.phone && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.phone}</span>}
                 </div>
                 <div className="form-group">
                   <label className="label">Salary *</label>
-                  <input name="salary" className="input" type="number" placeholder="25000" value={formData.salary} onChange={handleChange} />
+                  <input name="salary" className={`input ${errors.salary ? 'input-error' : ''}`} type="number" placeholder="25000" value={formData.salary} onChange={handleChange} />
+                  {errors.salary && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.salary}</span>}
                 </div>
               </div>
               <div className="form-group">
                 <label className="label">Email *</label>
-                <input name="email" className="input" type="email" placeholder="staff@example.com" value={formData.email} onChange={handleChange} />
+                <input name="email" className={`input ${errors.email ? 'input-error' : ''}`} type="email" placeholder="staff@example.com" value={formData.email} onChange={handleChange} />
+                {errors.email && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.email}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Education</label>

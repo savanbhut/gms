@@ -68,6 +68,7 @@ export default function Dashboard() {
   const [garageDetails, setGarageDetails] = useState<any>(null);
   const [isEditGarageOpen, setIsEditGarageOpen] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
     // Fetch Garage Details
@@ -83,7 +84,36 @@ export default function Dashboard() {
       .catch(err => console.error("Failed to fetch bookings", err));
   }, []);
 
+  const handleEditClick = () => {
+    setErrors({});
+    setIsEditGarageOpen(true);
+  };
+
   const handleSaveGarage = async () => {
+    // Validation
+    const { g_name, owner_name, phone, address } = garageDetails;
+    const newErrors: any = {};
+    let isValid = true;
+
+    if (!g_name?.trim()) { newErrors.g_name = "Garage Name is required"; isValid = false; }
+    if (!owner_name?.trim()) { newErrors.owner_name = "Owner Name is required"; isValid = false; }
+    if (!address?.trim()) { newErrors.address = "Address is required"; isValid = false; }
+
+    if (!phone) {
+      newErrors.phone = "Phone is required";
+      isValid = false;
+    } else if (!/^\d{10}$/.test(String(phone))) {
+      newErrors.phone = "Phone must be exactly 10 digits";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      toast.error("Please fix the errors");
+      return;
+    }
+
     try {
       const res = await fetch('http://localhost:5000/api/garage/1', {
         method: 'PUT',
@@ -149,7 +179,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="card-title">Garage Details</h3>
-            <button className="btn btn-outline btn-sm" onClick={() => setIsEditGarageOpen(true)}>Edit</button>
+            <button className="btn btn-outline btn-sm" onClick={handleEditClick}>Edit</button>
           </div>
           <div className="card-content">
             {garageDetails ? (
@@ -177,34 +207,38 @@ export default function Dashboard() {
               <div className="form-group">
                 <label className="label">Garage Name</label>
                 <input
-                  className="input"
+                  className={`input ${errors.g_name ? 'input-error' : ''}`}
                   value={garageDetails.g_name}
                   onChange={(e) => setGarageDetails({ ...garageDetails, g_name: e.target.value })}
                 />
+                {errors.g_name && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.g_name}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Owner Name</label>
                 <input
-                  className="input"
+                  className={`input ${errors.owner_name ? 'input-error' : ''}`}
                   value={garageDetails.owner_name}
                   onChange={(e) => setGarageDetails({ ...garageDetails, owner_name: e.target.value })}
                 />
+                {errors.owner_name && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.owner_name}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Phone</label>
                 <input
-                  className="input"
+                  className={`input ${errors.phone ? 'input-error' : ''}`}
                   value={garageDetails.phone}
                   onChange={(e) => setGarageDetails({ ...garageDetails, phone: e.target.value })}
                 />
+                {errors.phone && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.phone}</span>}
               </div>
               <div className="form-group">
                 <label className="label">Address</label>
                 <input
-                  className="input"
+                  className={`input ${errors.address ? 'input-error' : ''}`}
                   value={garageDetails.address}
                   onChange={(e) => setGarageDetails({ ...garageDetails, address: e.target.value })}
                 />
+                {errors.address && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.address}</span>}
               </div>
             </div>
             <div className="modal-footer">

@@ -13,10 +13,19 @@ export default function ForgotPassword() {
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState("");
+    const [otpError, setOtpError] = useState("");
+    const [passwordError, setPasswordError] = useState("");
     const navigate = useNavigate();
 
     const handleSendOTP = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!email.trim()) {
+            setEmailError("Please fill in this field");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await fetch("http://localhost:5000/api/auth/forgot-password", {
@@ -40,6 +49,12 @@ export default function ForgotPassword() {
 
     const handleVerifyOTP = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!otp.trim()) {
+            setOtpError("Please fill in this field");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await fetch("http://localhost:5000/api/auth/verify-otp", {
@@ -63,6 +78,12 @@ export default function ForgotPassword() {
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!newPassword.trim()) {
+            setPasswordError("Please fill in this field");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await fetch("http://localhost:5000/api/auth/reset-password", {
@@ -101,18 +122,24 @@ export default function ForgotPassword() {
                 </CardHeader>
                 <CardContent>
                     {step === 1 && (
-                        <form onSubmit={handleSendOTP} className="space-y-4">
+                        <form onSubmit={handleSendOTP} className="space-y-4" noValidate>
                             <div className="space-y-2">
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                                     <Input
                                         type="email"
                                         placeholder="name@example.com"
-                                        className="pl-10"
                                         value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            if (emailError) setEmailError("");
+                                        }}
                                         required
+                                        className={`pl-10 ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                                     />
+                                    {emailError && (
+                                        <p className="text-sm font-medium text-red-500 mt-1">{emailError}</p>
+                                    )}
                                 </div>
                             </div>
                             <Button type="submit" className="w-full" disabled={loading}>
@@ -122,19 +149,25 @@ export default function ForgotPassword() {
                     )}
 
                     {step === 2 && (
-                        <form onSubmit={handleVerifyOTP} className="space-y-4">
+                        <form onSubmit={handleVerifyOTP} className="space-y-4" noValidate>
                             <div className="space-y-2">
                                 <div className="relative">
                                     <KeyRound className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                                     <Input
                                         type="text"
                                         placeholder="Enter 6-digit OTP"
-                                        className="pl-10 tracking-widest text-center text-lg"
                                         value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
+                                        onChange={(e) => {
+                                            setOtp(e.target.value);
+                                            if (otpError) setOtpError("");
+                                        }}
                                         maxLength={6}
                                         required
+                                        className={`pl-10 tracking-widest text-center text-lg ${otpError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                                     />
+                                    {otpError && (
+                                        <p className="text-sm font-medium text-red-500 mt-1">{otpError}</p>
+                                    )}
                                 </div>
                             </div>
                             <Button type="submit" className="w-full" disabled={loading}>
@@ -149,19 +182,25 @@ export default function ForgotPassword() {
                     )}
 
                     {step === 3 && (
-                        <form onSubmit={handleResetPassword} className="space-y-4">
+                        <form onSubmit={handleResetPassword} className="space-y-4" noValidate>
                             <div className="space-y-2">
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                                     <Input
                                         type="password"
                                         placeholder="New Password"
-                                        className="pl-10"
                                         value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        onChange={(e) => {
+                                            setNewPassword(e.target.value);
+                                            if (passwordError) setPasswordError("");
+                                        }}
                                         required
                                         minLength={6}
+                                        className={`pl-10 ${passwordError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                                     />
+                                    {passwordError && (
+                                        <p className="text-sm font-medium text-red-500 mt-1">{passwordError}</p>
+                                    )}
                                 </div>
                             </div>
                             <Button type="submit" className="w-full" disabled={loading}>

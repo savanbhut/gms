@@ -14,6 +14,7 @@ import Services from "./pages/Services";
 import Bookings from "./pages/Bookings";
 import Payments from "./pages/Payments";
 import Feedback from "./pages/Feedback";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import { ProtectedRoute, PublicRoute } from "./components/ProtectedRoute";
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/feedback" element={<Feedback />} />
+              <Route path="/reports" element={<Reports />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -126,35 +126,6 @@ export default function Payments() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="btn btn-outline">
-          <Download style={{ width: '1rem', height: '1rem' }} />
-          Export
-        </button>
-      </div>
-
-      {/* Payment Methods Summary */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div className="card-header">
-          <h3 className="card-title">Payment Methods</h3>
-        </div>
-        <div className="card-content">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-            {['UPI', 'Credit Card', 'Debit Card', 'Net Banking'].map((method) => {
-              const count = payments.filter((p) => p.paymentType === method).length;
-              return (
-                <div key={method} className="payment-method-card">
-                  <div className="payment-method-icon">
-                    {paymentIcons[method]}
-                  </div>
-                  <div className="payment-method-info">
-                    <p>{method}</p>
-                    <p>{count} transactions</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       {/* Table */}
@@ -166,7 +137,6 @@ export default function Payments() {
                 <tr>
                   <th>ID</th>
                   <th>Transaction ID</th>
-                  <th>Method</th>
                   <th>Booking</th>
                   <th>Amount</th>
                   <th>Date</th>
@@ -180,12 +150,6 @@ export default function Payments() {
                     <tr key={payment.pid}>
                       <td>{payment.pid}</td>
                       <td>{payment.transactionId}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {paymentIcons[payment.paymentType]}
-                          <span>{payment.paymentType}</span>
-                        </div>
-                      </td>
                       <td>{booking?.customerName || `#${payment.bid}`}</td>
                       <td style={{ fontWeight: 600 }}>₹{payment.amount.toLocaleString()}</td>
                       <td>{payment.date}</td>

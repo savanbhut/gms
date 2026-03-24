@@ -15,13 +15,42 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<{ current?: string; new?: string; confirm?: string }>({});
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            toast.error("New passwords do not match");
+
+        // Validation
+        const newErrors: { current?: string; new?: string; confirm?: string } = {};
+        let hasError = false;
+
+        if (!currentPassword) {
+            newErrors.current = "Current password is required";
+            hasError = true;
+        }
+
+        if (!newPassword) {
+            newErrors.new = "New password is required";
+            hasError = true;
+        } else if (newPassword.length < 6) {
+            newErrors.new = "Password must be at least 6 characters";
+            hasError = true;
+        }
+
+        if (!confirmPassword) {
+            newErrors.confirm = "Please confirm your new password";
+            hasError = true;
+        } else if (newPassword !== confirmPassword) {
+            newErrors.confirm = "New passwords do not match";
+            hasError = true;
+        }
+
+        if (hasError) {
+            setErrors(newErrors);
             return;
         }
+
+        setErrors({});
 
         setLoading(true);
         try {
@@ -50,8 +79,13 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                 setCurrentPassword("");
                 setNewPassword("");
                 setConfirmPassword("");
+                setErrors({});
             } else {
-                toast.error(data.message || "Failed to change password");
+                if (data.message === "Incorrect current password") {
+                    setErrors({ current: data.message });
+                } else {
+                    toast.error(data.message || "Failed to change password");
+                }
             }
         } catch (error: any) {
             console.error("Change Password Error:", error);
@@ -75,8 +109,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                             type="password"
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            required
                         />
+                        {errors.current && <span className="error-text">{errors.current}</span>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="new">New Password</Label>
@@ -85,8 +119,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                             type="password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            required
                         />
+                        {errors.new && <span className="error-text">{errors.new}</span>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="confirm">Confirm New Password</Label>
@@ -95,8 +129,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
                         />
+                        {errors.confirm && <span className="error-text">{errors.confirm}</span>}
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

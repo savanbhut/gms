@@ -90,6 +90,9 @@ export default function StaffPage() {
       isValid = false;
     }
 
+    if (!formData.education.trim()) { newErrors.education = "Education is required"; isValid = false; }
+    if (!formData.address.trim()) { newErrors.address = "Address is required"; isValid = false; }
+
     setErrors(newErrors);
 
     if (!isValid) return;
@@ -251,12 +254,14 @@ export default function StaffPage() {
                 {errors.email && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.email}</span>}
               </div>
               <div className="form-group">
-                <label className="label">Education</label>
-                <input name="education" className="input" placeholder="ITI, Diploma, etc." value={formData.education} onChange={handleChange} />
+                <label className="label">Education *</label>
+                <input name="education" className={`input ${errors.education ? 'input-error' : ''}`} placeholder="ITI, Diploma, etc." value={formData.education} onChange={handleChange} />
+                {errors.education && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.education}</span>}
               </div>
               <div className="form-group">
-                <label className="label">Address</label>
-                <input name="address" className="input" placeholder="Full address" value={formData.address} onChange={handleChange} />
+                <label className="label">Address *</label>
+                <input name="address" className={`input ${errors.address ? 'input-error' : ''}`} placeholder="Full address" value={formData.address} onChange={handleChange} />
+                {errors.address && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.address}</span>}
               </div>
             </div>
             <div className="modal-footer">

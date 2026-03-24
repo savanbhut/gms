@@ -6,6 +6,16 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import '../../styles/components.css';
 import '../../styles/pages.css';
 
+const getLocalDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getLocalTimeStr = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 interface Service {
     sid: number;
     gid: number;
@@ -20,7 +30,9 @@ export default function CustomerServices() {
     const [services, setServices] = useState<Service[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [cart, setCart] = useState<Service[]>([]);
+    const [bookingErrors, setBookingErrors] = useState<{ date?: string; time?: string }>({});
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedDateStr, setSelectedDateStr] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
     const userUid = localStorage.getItem('userUid') || '1';
@@ -49,18 +61,20 @@ export default function CustomerServices() {
     const toggleCart = (service: Service) => {
         if (cart.find(s => s.sid === service.sid)) {
             setCart(prev => prev.filter(s => s.sid !== service.sid));
-            toast.info("Removed from cart");
+            toast.info("Service removed");
         } else {
             setCart(prev => [...prev, service]);
-            toast.success("Added to cart");
+            toast.success("Service selected");
         }
     };
 
     const openCheckoutModal = () => {
         if (cart.length === 0) {
-            toast.warning("Cart is empty");
+            toast.warning("No services selected");
             return;
         }
+        setSelectedDateStr('');
+        setBookingErrors({});
         setShowBookingModal(true);
     };
 
@@ -72,6 +86,43 @@ export default function CustomerServices() {
         const desc = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
         if (cart.length === 0) return;
+
+        // Validation
+        const newErrors: { date?: string; time?: string } = {};
+        let hasError = false;
+
+        if (!date) {
+            newErrors.date = "Date is required";
+            hasError = true;
+        }
+
+        if (!time) {
+            newErrors.time = "Time is required";
+            hasError = true;
+        }
+
+        if (date && time) {
+            const selectedDateTime = new Date(`${date}T${time}`);
+            const now = new Date();
+
+            if (selectedDateTime <= now) {
+                newErrors.date = "Booking date and time must be in the future";
+                hasError = true;
+            }
+
+            const hours = selectedDateTime.getHours();
+            if (hours < 9 || hours >= 18) {
+                newErrors.time = "Please select a time between 9:00 AM and 6:00 PM";
+                hasError = true;
+            }
+        }
+
+        if (hasError) {
+            setBookingErrors(newErrors);
+            return;
+        }
+
+        setBookingErrors({}); // Clear errors if valid
 
         setIsLoading(true);
         try {
@@ -173,7 +224,7 @@ export default function CustomerServices() {
                                         onClick={() => toggleCart(service)}
                                         className={`btn ${isInCart ? 'btn-destructive' : 'btn-primary'}`}
                                     >
-                                        {isInCart ? 'Remove' : 'Add to Cart'}
+                                        {isInCart ? 'Remove' : 'Book Service'}
                                     </button>
                                 </div>
                             </div>
@@ -232,11 +283,25 @@ export default function CustomerServices() {
                                 <div className="modal-body">
                                     <div className="form-group">
                                         <label className="label">Preferred Date</label>
-                                        <input name="date" type="date" className="input" required min={new Date().toISOString().split('T')[0]} />
+                                        <input
+                                            name="date"
+                                            type="date"
+                                            className="input"
+                                            min={getLocalDateStr()}
+                                            onChange={(e) => setSelectedDateStr(e.target.value)}
+                                        />
+                                        {bookingErrors.date && <span className="error-text">{bookingErrors.date}</span>}
                                     </div>
                                     <div className="form-group">
                                         <label className="label">Preferred Time</label>
-                                        <input name="time" type="time" className="input" required />
+                                        <input
+                                            name="time"
+                                            type="time"
+                                            className="input"
+                                            min={selectedDateStr === getLocalDateStr() ? getLocalTimeStr() : "09:00"}
+                                            max="18:00"
+                                        />
+                                        {bookingErrors.time && <span className="error-text">{bookingErrors.time}</span>}
                                     </div>
                                     <div className="form-group">
                                         <label className="label">Notes / Issues</label>

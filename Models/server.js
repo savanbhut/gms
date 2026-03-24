@@ -438,13 +438,425 @@ app.get('/api/services', async (req, res) => {
     }
 });
 
+// Get API for Customers
+app.get('/api/customers', async (req, res) => {
+    try {
+        const customers = await Customer.find({});
+        res.json(customers);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching customers" });
+    }
+});
+
+// Create New Service
+app.post('/api/services', async (req, res) => {
+    try {
+        const { service_name, vehicle_type, price, duration, description, is_active } = req.body;
+
+        if (!service_name || !vehicle_type || !price || !duration) {
+            return res.status(400).json({ success: false, message: "Missing service details" });
+        }
+
+        const sid = Math.floor(Math.random() * 100000);
+        const newService = new Service({
+            sid,
+            gid: 1, // Default garage
+            service_name,
+            vehicle_type,
+            price,
+            duration,
+            description,
+            is_active: is_active !== undefined ? is_active : true
+        });
+
+        await newService.save();
+        res.json({ success: true, message: "Service added successfully" });
+    } catch (err) {
+        console.error("Add Service Error:", err);
+        res.status(500).json({ success: false, message: "Error adding service" });
+    }
+});
+
+// --- DASHBOARD APIs ---
+
+app.get('/api/stats/dashboard', async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const totalBookings = await Booking.countDocuments({});
+        const pendingBookings = await Booking.countDocuments({ status: 'Pending' });
+        const completedToday = await Booking.countDocuments({
+            status: 'Completed',
+            date: { $gte: today, $lt: tomorrow }
+        });
+
+        // Total Revenue (Sum of all successful payments)
+        const revenueResult = await Payment.aggregate([
+            { $match: { status: 'Success' } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]);
+        const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+        const activeCustomers = await Customer.countDocuments({});
+
+        res.json({
+            success: true,
+            stats: {
+                totalBookings,
+                pendingBookings,
+                completedToday,
+                totalRevenue,
+                activeCustomers
+            }
+        });
+    } catch (err) {
+        console.error("Dashboard Stats Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching dashboard stats" });
+    }
+});
+
+// --- REPORTING APIs ---
+
+// Helper for Report Filtering
+async function getReportFilters(customerName, serviceName) {
+    let finalValidBids = null;
+    let validSids = null;
+    let validCids = null;
+
+    if (customerName || serviceName) {
+        if (customerName) {
+            const customers = await Customer.find({ name: { $regex: customerName, $options: 'i' } });
+            validCids = customers.map(c => c.cid);
+        }
+        if (serviceName) {
+            const services = await Service.find({ service_name: { $regex: serviceName, $options: 'i' } });
+            validSids = services.map(s => s.sid);
+        }
+
+        let bidsForCustomer = null; 
+        if (validCids) {
+            const bookings = await Booking.find({ cid: { $in: validCids } });
+            bidsForCustomer = bookings.map(b => b.bid);
+        }
+
+        let bidsForService = null;
+        if (validSids) {
+            const bookedServices = await BookedService.find({ sid: { $in: validSids } });
+            bidsForService = bookedServices.map(bs => bs.bid);
+        }
+
+        if (bidsForCustomer && bidsForService) {
+            finalValidBids = bidsForCustomer.filter(bid => bidsForService.includes(bid));
+        } else if (bidsForCustomer) {
+            finalValidBids = bidsForCustomer;
+        } else if (bidsForService) {
+            finalValidBids = bidsForService;
+        }
+        
+        // If filters applied but no matches found, ensure query returns nothing
+        if (finalValidBids && finalValidBids.length === 0) {
+            finalValidBids = [-1]; // Impossible bid
+        }
+    }
+    
+    return { finalValidBids, validSids, validCids };
+}
+
+// 1. Financial & Revenue Reports
+app.get('/api/reports/financial', async (req, res) => {
+    try {
+        const { startDate, endDate, customerName, serviceName } = req.query;
+        let dateFilter = {};
+        let bsDateFilter = {};
+        
+        if (startDate && endDate) {
+            dateFilter.date = { 
+                $gte: new Date(startDate), 
+                $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
+            };
+            bsDateFilter.service_date = { 
+                $gte: new Date(startDate), 
+                $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
+            };
+        }
+
+        const { finalValidBids, validSids } = await getReportFilters(customerName, serviceName);
+
+        const paymentFilter = { status: 'Success', ...dateFilter };
+        if (finalValidBids) paymentFilter.bid = { $in: finalValidBids };
+
+        // Total Revenue Grouped by Date
+        const revenueResult = await Payment.aggregate([
+            { $match: paymentFilter },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]);
+        const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+        // Revenue Timeline (Daily)
+        const timelineResult = await Payment.aggregate([
+            { $match: paymentFilter },
+            { 
+               $group: { 
+                   _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
+                   dailyRevenue: { $sum: "$amount" } 
+               } 
+            },
+            { $sort: { _id: 1 } }
+        ]);
+        
+        const revenueTimeline = timelineResult.map(t => ({
+            date: t._id,
+            revenue: t.dailyRevenue
+        }));
+
+
+        const pendingFilter = { status: 'Pending', ...dateFilter };
+        if (finalValidBids) pendingFilter.bid = { $in: finalValidBids };
+        
+        // Pending Payments
+        const pendingPayments = await Payment.find(pendingFilter).populate('bid');
+        const enrichedPending = await Promise.all(pendingPayments.map(async (p) => {
+            const booking = await Booking.findOne({ bid: p.bid });
+            let custName = 'Unknown';
+            if (booking) {
+                const customer = await Customer.findOne({ cid: booking.cid });
+                if (customer) custName = customer.name;
+            }
+            return {
+                ...p.toObject(),
+                customerName: custName,
+                date: p.date,
+                amount: p.amount
+            };
+        }));
+
+        const bsFilter = { ...bsDateFilter };
+        if (validSids && !customerName) bsFilter.sid = { $in: validSids };
+        if (finalValidBids) bsFilter.bid = { $in: finalValidBids };
+
+        // Revenue by Service Idea: Aggregate BookedServices where Payment is Success (Complex relation)
+        // Simplified: Just aggregate BookedServices cost
+        const revenueByService = await BookedService.aggregate([
+            { $match: bsFilter },
+            { $group: { _id: "$sid", totalRevenue: { $sum: "$cost" }, count: { $sum: 1 } } }
+        ]);
+        
+        // Enrich with Service Names
+        const enrichedRevenueByService = await Promise.all(revenueByService.map(async (rs) => {
+            const service = await Service.findOne({ sid: rs._id });
+            return {
+                serviceName: service ? service.service_name : 'Unknown Service',
+                totalRevenue: rs.totalRevenue,
+                count: rs.count
+            };
+        }));
+
+        // Revenue by Customer
+        const successPayments = await Payment.find(paymentFilter);
+        
+        let customerRevenueMap = {};
+        for (const p of successPayments) {
+            const booking = await Booking.findOne({ bid: p.bid });
+            if (booking) {
+                const cid = booking.cid;
+                if (!customerRevenueMap[cid]) customerRevenueMap[cid] = 0;
+                customerRevenueMap[cid] += p.amount;
+            }
+        }
+
+        let revenueByCustomer = [];
+        for (const cid in customerRevenueMap) {
+            const customer = await Customer.findOne({ cid: Number(cid) });
+            revenueByCustomer.push({
+                customerName: customer ? customer.name : 'Unknown',
+                totalRevenue: customerRevenueMap[cid]
+            });
+        }
+        // Sort by highest revenue
+        revenueByCustomer.sort((a,b) => b.totalRevenue - a.totalRevenue);
+
+        // Revenue by Vehicle Type
+        const validPaymentBids = successPayments.map(p => p.bid);
+        const revenueByVehicleTypeRaw = await BookedService.aggregate([
+            { $match: { bid: { $in: validPaymentBids } } },
+            { $lookup: { from: "services", localField: "sid", foreignField: "sid", as: "serviceDetails" } },
+            { $unwind: "$serviceDetails" },
+            { $group: { _id: "$serviceDetails.vehicle_type", revenue: { $sum: "$cost" } } }
+        ]);
+
+        const revenueByVehicleType = revenueByVehicleTypeRaw.map(v => ({
+            vehicleType: v._id || 'Unknown',
+            revenue: v.revenue
+        }));
+
+        res.json({
+            success: true,
+            totalRevenue,
+            revenueTimeline,
+            pendingPayments: enrichedPending,
+            revenueByService: enrichedRevenueByService,
+            revenueByCustomer,
+            revenueByVehicleType
+        });
+    } catch (err) {
+        console.error("Financial Report Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching financial reports" });
+    }
+});
+
+// 2. Service Performance Reports
+app.get('/api/reports/services', async (req, res) => {
+    try {
+        const { startDate, endDate, customerName, serviceName } = req.query;
+        let bsDateFilter = {};
+        
+        if (startDate && endDate) {
+            bsDateFilter.service_date = { 
+                $gte: new Date(startDate), 
+                $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
+            };
+        }
+
+        const { finalValidBids, validSids } = await getReportFilters(customerName, serviceName);
+
+        const bsFilter = { ...bsDateFilter };
+        if (validSids && !customerName) bsFilter.sid = { $in: validSids };
+        if (finalValidBids) bsFilter.bid = { $in: finalValidBids };
+
+        // Most Popular Services
+        const popularServices = await BookedService.aggregate([
+            { $match: bsFilter },
+            { $group: { _id: "$sid", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        const enrichedPopularServices = await Promise.all(popularServices.map(async (ps) => {
+            const service = await Service.findOne({ sid: ps._id });
+            return {
+                serviceName: service ? service.service_name : 'Unknown',
+                vehicleType: service ? service.vehicle_type : 'Unknown',
+                count: ps.count
+            };
+        }));
+
+        // Breakdown by Vehicle Type from Booked Services
+        const vehicleTypeBreakdown = await BookedService.aggregate([
+            { $match: bsFilter },
+            { $lookup: { from: "services", localField: "sid", foreignField: "sid", as: "serviceDetails" } },
+            { $unwind: "$serviceDetails" },
+            { $group: { _id: "$serviceDetails.vehicle_type", count: { $sum: 1 } } }
+        ]);
+
+        res.json({
+            success: true,
+            popularServices: enrichedPopularServices,
+            vehicleTypeBreakdown
+        });
+    } catch (err) {
+        console.error("Service Report Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching service reports" });
+    }
+});
+
+// 3. Customer & Feedback Reports
+app.get('/api/reports/customers', async (req, res) => {
+    try {
+        const { startDate, endDate, customerName, serviceName } = req.query;
+        let dateFilter = {};
+        
+        if (startDate && endDate) {
+            dateFilter.date = { 
+                $gte: new Date(startDate), 
+                $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) 
+            };
+        }
+
+        const { finalValidBids, validCids } = await getReportFilters(customerName, serviceName);
+
+        const bookingFilter = { ...dateFilter };
+        if (validCids && !serviceName) bookingFilter.cid = { $in: validCids };
+        if (finalValidBids) bookingFilter.bid = { $in: finalValidBids };
+
+        // Top Customers (Most Bookings)
+        const topCustomers = await Booking.aggregate([
+            { $match: bookingFilter },
+            { $group: { _id: "$cid", bookingCount: { $sum: 1 } } },
+            { $sort: { bookingCount: -1 } },
+            { $limit: 10 }
+        ]);
+
+        const enrichedTopCustomers = await Promise.all(topCustomers.map(async (tc) => {
+            const customer = await Customer.findOne({ cid: tc._id });
+            return {
+                customerName: customer ? customer.name : 'Unknown',
+                email: customer ? customer.email : 'Unknown',
+                bookingCount: tc.bookingCount
+            };
+        }));
+
+        // Customer Satisfaction / Recent Feedback
+        // Just fetching the latest 10 feedbacks to display in the report
+        const feedbackFilter = { ...dateFilter };
+        if (validCids) feedbackFilter.cid = { $in: validCids };
+        if (finalValidBids) {
+             const matchingBookings = await Booking.find({ bid: { $in: finalValidBids } });
+             const cidsFromBids = matchingBookings.map(b => b.cid);
+             feedbackFilter.cid = { $in: cidsFromBids };
+        }
+
+        const recentFeedback = await Feedback.find(feedbackFilter).sort({ date: -1 }).limit(10);
+        const enrichedFeedback = await Promise.all(recentFeedback.map(async (f) => {
+            const customer = await Customer.findOne({ cid: f.cid });
+            return {
+                ...f.toObject(),
+                customerName: customer ? customer.name : 'Unknown'
+            };
+        }));
+
+        res.json({
+            success: true,
+            topCustomers: enrichedTopCustomers,
+            recentFeedback: enrichedFeedback
+        });
+    } catch (err) {
+        console.error("Customer Report Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching customer reports" });
+    }
+});
+
+// --- FEEDBACK APIs ---
+
+// Get ALL Feedback (Admin)
+app.get('/api/feedback', async (req, res) => {
+    try {
+        const feedbacks = await Feedback.find({}).sort({ date: -1 });
+
+        const enrichedFeedbacks = await Promise.all(feedbacks.map(async (f) => {
+            const customer = await Customer.findOne({ cid: f.cid });
+            return {
+                ...f.toObject(),
+                customerName: customer ? customer.name : 'Unknown'
+            };
+        }));
+
+        res.json(enrichedFeedbacks);
+    } catch (err) {
+        console.error("Fetch Feedback Error:", err);
+        res.status(500).json({ success: false, message: "Error fetching feedback" });
+    }
+});
+
 // --- BOOKING APIs ---
 
 // Get ALL Bookings (Admin/Manager)
 app.get('/api/bookings', async (req, res) => {
     try {
-        // Fetch all bookings
-        const bookings = await Booking.find({});
+        // Fetch all bookings sorted by _id (creation time) descending
+        const bookings = await Booking.find({}).sort({ _id: -1 });
 
         // We need to join with Customer and Service details to make it useful
         // For MVP Mongoose without populate setup, we might stick to basic fetch
@@ -587,6 +999,40 @@ app.put('/api/bookings/:bid/status', async (req, res) => {
     } catch (err) {
         console.error("Update Booking Status Error:", err);
         res.status(500).json({ success: false, message: "Error updating booking status" });
+    }
+});
+
+// Fix Invalid Times (Debug/Utility)
+app.get('/api/debug/fix-times', async (req, res) => {
+    try {
+        const bookings = await Booking.find({});
+        let updatedCount = 0;
+
+        const updatePromises = bookings.map(async (b) => {
+            if (!b.time) return;
+
+            const [hourStr, minuteStr] = b.time.split(':');
+            const hour = parseInt(hourStr);
+
+            // Check if outside 09:00 (9) to 18:00 (18)
+            // Or if formatting is weird
+            if (isNaN(hour) || hour < 9 || hour > 18) {
+                // Generate Random Time between 9 and 17 (so 9:00 to 17:59, effectively < 18:00 range safely)
+                // Actually 9 to 18 inclusive is okay if 18:00 is max.
+                const randomHour = 9 + Math.floor(Math.random() * 9); // 0-8 + 9 = 9-17
+                const randomMinute = Math.random() < 0.5 ? '00' : '30';
+                const newTime = `${String(randomHour).padStart(2, '0')}:${randomMinute}`;
+
+                await Booking.updateOne({ _id: b._id }, { $set: { time: newTime } });
+                updatedCount++;
+            }
+        });
+
+        await Promise.all(updatePromises);
+        res.json({ success: true, message: `Updated ${updatedCount} bookings with valid times.` });
+    } catch (err) {
+        console.error("Fix Times Error:", err);
+        res.status(500).json({ success: false, message: "Error fixing times" });
     }
 });
 
@@ -779,7 +1225,7 @@ app.post('/api/payments', async (req, res) => {
 // Get ALL Payments (Admin)
 app.get('/api/payments', async (req, res) => {
     try {
-        const payments = await Payment.find({});
+        const payments = await Payment.find({}).sort({ _id: -1 });
         res.json(payments);
     } catch (err) {
         res.status(500).json({ message: "Error fetching payments" });
@@ -791,7 +1237,7 @@ app.get('/api/payments', async (req, res) => {
 // Get ALL Customers
 app.get('/api/customers', async (req, res) => {
     try {
-        const customers = await Customer.find({});
+        const customers = await Customer.find({}).sort({ _id: -1 });
         res.json(customers);
     } catch (err) {
         res.status(500).json({ message: "Error fetching customers" });
@@ -863,6 +1309,24 @@ app.post('/api/staff', async (req, res) => {
 });
 
 // --- FEEDBACK APIs ---
+
+app.get('/api/feedback', async (req, res) => {
+    try {
+        const feedbacks = await Feedback.find({}).sort({ date: -1 });
+        const customers = await Customer.find({});
+
+        const result = feedbacks.map(f => {
+            const customer = customers.find(c => c.cid === f.cid);
+            return {
+                ...f.toObject(),
+                customerName: customer ? customer.name : 'Unknown'
+            };
+        });
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching feedback" });
+    }
+});
 
 app.get('/api/feedback/:uid', async (req, res) => {
     try {

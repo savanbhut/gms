@@ -136,7 +136,14 @@ export default function Bookings() {
                     <td>{booking.customerName}</td>
                     <td>{booking.serviceName}</td>
                     <td>{new Date(booking.date).toLocaleDateString()}</td>
-                    <td>{booking.time}</td>
+                    <td>{(() => {
+                      if (!booking.time) return '';
+                      const [h, m] = booking.time.split(':');
+                      const hour = parseInt(h);
+                      const ampm = hour >= 12 ? 'PM' : 'AM';
+                      const hour12 = hour % 12 || 12;
+                      return `${hour12}:${m} ${ampm}`;
+                    })()}</td>
                     <td><StatusBadge status={booking.status} /></td>
 
                     <td>

@@ -79,10 +79,10 @@ const CustomerSchema = new mongoose.Schema({
 const ServiceSchema = new mongoose.Schema({
   sid: { type: Number, unique: true },
   gid: { type: Number, ref: 'Garage' },
-  service_name: { type: String, required: true, maxlength: 20 },
-  vehicle_type: { type: String, required: true, maxlength: 10 },
+  service_name: { type: String, required: true, maxlength: 100 },
+  vehicle_type: { type: String, required: true, maxlength: 20 },
   price: { type: Number, required: true },
-  description: { type: String, maxlength: 50 },
+  description: { type: String, maxlength: 500 },
   duration: { type: String, required: true },
   is_active: { type: Boolean, default: true }
 });

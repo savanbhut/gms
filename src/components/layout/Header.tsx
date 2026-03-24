@@ -38,7 +38,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         >
           <div className="avatar">{(localStorage.getItem('userName') || 'U')[0]}</div>
           <div className="header-user-info">
-            <p>{localStorage.getItem('userName') || 'User'}</p>
+            <p>{localStorage.getItem('userName') === 'Manager John' ? 'Manager' : (localStorage.getItem('userName') || 'User')}</p>
           </div>
         </div>
       </div>

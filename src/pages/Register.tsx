@@ -41,12 +41,16 @@ export default function Register() {
     const nameRegex = /^[A-Za-z]+$/;
     if (!formData.firstName) {
       newErrors.firstName = 'First name is required';
+    } else if (formData.firstName.length < 2) {
+      newErrors.firstName = 'First Name must be at least 2 characters';
     } else if (!nameRegex.test(formData.firstName)) {
       newErrors.firstName = 'First Name must contain only letters';
     }
 
     if (!formData.lastName) {
       newErrors.lastName = 'Last name is required';
+    } else if (formData.lastName.length < 2) {
+      newErrors.lastName = 'Last Name must be at least 2 characters';
     } else if (!nameRegex.test(formData.lastName)) {
       newErrors.lastName = 'Last Name must contain only letters';
     }

@@ -1,5 +1,4 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { dashboardStats, mockFeedback } from '@/data/mockData';
 import { CalendarDays, Users, Clock, CheckCircle, TrendingUp, Star } from 'lucide-react';
 import '../styles/components.css';
 import '../styles/pages.css';
@@ -68,7 +67,10 @@ export default function Dashboard() {
   const [garageDetails, setGarageDetails] = useState<any>(null);
   const [isEditGarageOpen, setIsEditGarageOpen] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [recentFeedback, setRecentFeedback] = useState<any[]>([]);
   const [errors, setErrors] = useState<any>({});
+
 
   useEffect(() => {
     // Fetch Garage Details
@@ -82,6 +84,20 @@ export default function Dashboard() {
       .then(res => res.json())
       .then(data => setBookings(data))
       .catch(err => console.error("Failed to fetch bookings", err));
+
+    // Fetch Stats
+    fetch('http://localhost:5000/api/stats/dashboard')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setStats(data.stats);
+      })
+      .catch(err => console.error("Failed to fetch dashboard stats", err));
+
+    // Fetch Feedback
+    fetch('http://localhost:5000/api/feedback')
+      .then(res => res.json())
+      .then(data => setRecentFeedback(data))
+      .catch(err => console.error("Failed to fetch feedback", err));
   }, []);
 
   const handleEditClick = () => {
@@ -137,33 +153,31 @@ export default function Dashboard() {
   }
 
   return (
-    <DashboardLayout title="Dashboard" subtitle="Welcome back, Rajesh!">
+    <DashboardLayout title="Dashboard">
       {/* Stats Grid */}
       <div className="page-grid page-grid-4" style={{ marginBottom: '2rem' }}>
         <StatCard
           title="Total Bookings"
-          value={dashboardStats.totalBookings}
+          value={stats?.totalBookings || 0}
           icon={CalendarDays}
-          trend={{ value: 12, isPositive: true }}
           variant="primary"
         />
         <StatCard
           title="Pending Bookings"
-          value={dashboardStats.pendingBookings}
+          value={stats?.pendingBookings || 0}
           icon={Clock}
           variant="warning"
         />
         <StatCard
           title="Completed Today"
-          value={dashboardStats.completedToday}
+          value={stats?.completedToday || 0}
           icon={CheckCircle}
           variant="success"
         />
         <StatCard
           title="Total Revenue"
-          value={`₹${dashboardStats.totalRevenue.toLocaleString()}`}
+          value={`₹${(stats?.totalRevenue || 0).toLocaleString()}`}
           icon={TrendingUp}
-          trend={{ value: 8, isPositive: true }}
         />
       </div>
 
@@ -171,7 +185,7 @@ export default function Dashboard() {
       <div className="page-grid page-grid-2" style={{ marginBottom: '2rem' }}>
         <StatCard
           title="Active Customers"
-          value={dashboardStats.activeCustomers}
+          value={stats?.activeCustomers || 0}
           icon={Users}
         />
 
@@ -179,7 +193,9 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="card-title">Garage Details</h3>
-            <button className="btn btn-outline btn-sm" onClick={handleEditClick}>Edit</button>
+            {userRole !== 'manager' && (
+              <button className="btn btn-outline btn-sm" onClick={handleEditClick}>Edit</button>
+            )}
           </div>
           <div className="card-content">
             {garageDetails ? (
@@ -295,28 +311,16 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Rating</th>
                     <th>Comment</th>
                     <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mockFeedback.map((feedback: Feedback) => (
-                    <tr key={feedback.fid}>
+                  {recentFeedback.slice(0, 3).map((feedback: any) => (
+                    <tr key={feedback.fid || feedback._id}>
                       <td>{feedback.customerName}</td>
-                      <td>
-                        <div className="star-rating">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              style={{ width: '0.875rem', height: '0.875rem' }}
-                              className={i < (feedback.rating || 0) ? 'filled' : 'empty'}
-                            />
-                          ))}
-                        </div>
-                      </td>
                       <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{feedback.description}</td>
-                      <td>{feedback.date}</td>
+                      <td>{new Date(feedback.date).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>

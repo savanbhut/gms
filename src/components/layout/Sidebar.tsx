@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   Car,
   ChevronDown,
+  BarChart3,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -33,6 +34,7 @@ const menuItems = [
   { icon: CalendarDays, label: 'Bookings', path: '/bookings' },
   { icon: CreditCard, label: 'Payments', path: '/payments' },
   { icon: MessageSquare, label: 'Feedback', path: '/feedback' },
+  { icon: BarChart3, label: 'Reports', path: '/reports' },
 ];
 
 interface SidebarProps {
@@ -83,8 +85,8 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           }
 
           if (role === 'manager') {
-            // Managers can't access Garages
-            return item.path !== '/garages';
+            // Managers can't access Garages or Reports
+            return item.path !== '/garages' && item.path !== '/reports';
           }
 
           // Admins see everything

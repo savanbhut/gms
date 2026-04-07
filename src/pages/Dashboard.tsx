@@ -155,7 +155,7 @@ export default function Dashboard() {
   return (
     <DashboardLayout title="Dashboard">
       {/* Stats Grid */}
-      <div className="page-grid page-grid-4" style={{ marginBottom: '2rem' }}>
+      <div className="page-grid page-grid-3" style={{ marginBottom: '2rem' }}>
         <StatCard
           title="Total Bookings"
           value={stats?.totalBookings || 0}
@@ -167,12 +167,6 @@ export default function Dashboard() {
           value={stats?.pendingBookings || 0}
           icon={Clock}
           variant="warning"
-        />
-        <StatCard
-          title="Completed Today"
-          value={stats?.completedToday || 0}
-          icon={CheckCircle}
-          variant="success"
         />
         <StatCard
           title="Total Revenue"

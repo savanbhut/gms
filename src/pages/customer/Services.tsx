@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Search } from 'lucide-react';
+import { ShoppingBag, Search, Car, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import '../../styles/components.css';
@@ -210,12 +210,21 @@ export default function CustomerServices() {
                                         }}>
                                             <ShoppingBag size={24} />
                                         </div>
-                                        <span className="badge badge-default" style={{ fontSize: '0.875rem' }}>{service.duration}</span>
                                     </div>
                                     <h4 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>{service.service_name}</h4>
                                     <p style={{ color: 'var(--color-muted-foreground)', fontSize: '0.9rem', marginBottom: '1rem', lineHeight: '1.5' }}>
                                         {service.description}
                                     </p>
+                                    <div className="service-card-meta">
+                                        <div className="service-card-meta-item">
+                                            <Car />
+                                            <span>{service.vehicle_type}</span>
+                                        </div>
+                                        <div className="service-card-meta-item">
+                                            <Clock />
+                                            <span>{service.duration}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

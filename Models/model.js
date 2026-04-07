@@ -11,6 +11,12 @@ const mongoose = require('mongoose');
 // The user explicitly asked for 'AUTO_INCREMENT' which implies numeric IDs.
 // I will simulate the structure but Mongoose works best with _id. I will add custom ID fields.
 
+// Helper function to format strings to Pascal Case (Title Case for names with spaces)
+const toPascalCase = (v) => {
+  if (!v) return v;
+  return v.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
+};
+
 // --- 1. GARAGE_LIST_TBL ---
 const GarageListSchema = new mongoose.Schema({
   glid: { type: Number, unique: true }, // Auto-increment managed manually or by plugin
@@ -41,13 +47,13 @@ const UserSchema = new mongoose.Schema({
   uid: { type: Number, unique: true },
   gid: { type: Number, ref: 'Garage' }, // FK to Garage
   user_type: { type: String, required: true, maxlength: 20 },
-  f_name: { type: String, required: true, maxlength: 20 },
-  l_name: { type: String, required: true, maxlength: 20 },
+  f_name: { type: String, required: true, maxlength: 20, get: toPascalCase, set: toPascalCase },
+  l_name: { type: String, required: true, maxlength: 20, get: toPascalCase, set: toPascalCase },
   email: { type: String, required: true, unique: true, maxlength: 30 },
   address: { type: String, required: true, maxlength: 50 },
   password: { type: String, required: true, maxlength: 20 },
   is_active: { type: Boolean, default: true }
-});
+}, { toJSON: { getters: true }, toObject: { getters: true } });
 
 // --- 4. STAFF_TBL ---
 const StaffSchema = new mongoose.Schema({
@@ -69,11 +75,11 @@ const StaffSchema = new mongoose.Schema({
 const CustomerSchema = new mongoose.Schema({
   cid: { type: Number, unique: true },
   uid: { type: Number, required: true, unique: true }, // Links to User?
-  name: { type: String, required: true, maxlength: 20 },
+  name: { type: String, required: true, maxlength: 100, get: toPascalCase, set: toPascalCase },
   address: { type: String, required: true, maxlength: 50 },
   phone: { type: String, required: true, maxlength: 15 },
   email: { type: String, unique: true, maxlength: 30 }
-});
+}, { toJSON: { getters: true }, toObject: { getters: true } });
 
 // --- 6. SERVICE_TBL ---
 const ServiceSchema = new mongoose.Schema({

@@ -110,45 +110,49 @@ app.post('/api/login', async (req, res) => {
 
         // 1. Find User
         console.log("LOGIN ATTEMPT:", email, "Password:", password);
-        const user = await User.findOne({ email, password });
+        const user = await User.findOne({ email });
         console.log("LOGIN RESULT:", user ? "FOUND" : "NOT FOUND");
+
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Username is invalid" });
+        }
+
+        if (user.password !== password) {
+            return res.status(401).json({ success: false, message: "Password is invalid" });
+        }
 
         // 2. If not found in User table, check GarageList (for Garage Owners who might have separate login?)
         // The dictionary implies GarageList has UID/Password too. 
         // For simplicity, we assume all logins go through User table first or we check both.
         // Let's stick to User table for the main auth as per standard flow.
 
-        if (user) {
-            // Check if Customer profile exists for 'customer' role
-            if (user.user_type === 'customer') {
-                const customerProfile = await Customer.findOne({ uid: user.uid });
-                if (!customerProfile) {
-                    // Create missing Customer profile
-                    console.log("Creating missing Customer profile for:", user.email);
-                    const newCustomer = new Customer({
-                        cid: Math.floor(Math.random() * 100000),
-                        uid: user.uid,
-                        name: `${user.f_name} ${user.l_name}`,
-                        address: user.address,
-                        email: user.email,
-                        phone: "0000000000" // Placeholder or try fetch from User if schema supports
-                    });
-                    await newCustomer.save();
-                }
-            }
-
-            res.json({
-                success: true,
-                user: {
+        // Check if Customer profile exists for 'customer' role
+        if (user.user_type === 'customer') {
+            const customerProfile = await Customer.findOne({ uid: user.uid });
+            if (!customerProfile) {
+                // Create missing Customer profile
+                console.log("Creating missing Customer profile for:", user.email);
+                const newCustomer = new Customer({
+                    cid: Math.floor(Math.random() * 100000),
                     uid: user.uid,
                     name: `${user.f_name} ${user.l_name}`,
+                    address: user.address,
                     email: user.email,
-                    role: user.user_type
-                }
-            });
-        } else {
-            res.status(401).json({ success: false, message: "Invalid Credentials" });
+                    phone: "0000000000" // Placeholder or try fetch from User if schema supports
+                });
+                await newCustomer.save();
+            }
         }
+
+        res.json({
+            success: true,
+            user: {
+                uid: user.uid,
+                name: `${user.f_name} ${user.l_name}`,
+                email: user.email,
+                role: user.user_type
+            }
+        });
     } catch (err) {
         console.error("Login Error:", err);
         res.status(500).json({ success: false, message: "Server error during login" });
@@ -591,9 +595,27 @@ app.get('/api/reports/financial', async (req, res) => {
         // Total Revenue Grouped by Date
         const revenueResult = await Payment.aggregate([
             { $match: paymentFilter },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
+            { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } }
         ]);
         const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+        const totalBookings = revenueResult.length > 0 ? revenueResult[0].count : 0;
+
+        // Previous period revenue (same duration, immediately before the selected range)
+        let previousRevenue = null;
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(new Date(endDate).setHours(23, 59, 59, 999));
+            const durationMs = end.getTime() - start.getTime();
+            const prevEnd = new Date(start.getTime() - 1);
+            const prevStart = new Date(start.getTime() - durationMs - 1);
+            const prevFilter = { status: 'Success', date: { $gte: prevStart, $lte: prevEnd } };
+            if (finalValidBids) prevFilter.bid = { $in: finalValidBids };
+            const prevResult = await Payment.aggregate([
+                { $match: prevFilter },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]);
+            previousRevenue = prevResult.length > 0 ? prevResult[0].total : 0;
+        }
 
         // Revenue Timeline (Daily)
         const timelineResult = await Payment.aggregate([
@@ -695,6 +717,8 @@ app.get('/api/reports/financial', async (req, res) => {
         res.json({
             success: true,
             totalRevenue,
+            totalBookings,
+            previousRevenue,
             revenueTimeline,
             pendingPayments: enrichedPending,
             revenueByService: enrichedRevenueByService,
@@ -1308,6 +1332,28 @@ app.post('/api/staff', async (req, res) => {
     }
 });
 
+// Update Staff
+app.put('/api/staff/:stfid', async (req, res) => {
+    try {
+        const stfid = parseInt(req.params.stfid);
+        const { firstName, lastName, role, phone, email, salary, education, address, is_active } = req.body;
+
+        const result = await Staff.updateOne(
+            { stfid },
+            { $set: { f_name: firstName, l_name: lastName, role, phone, email, salary: Number(salary), education, address, is_active } }
+        );
+
+        if (result.matchedCount > 0) {
+            res.json({ success: true, message: 'Staff updated successfully' });
+        } else {
+            res.status(404).json({ success: false, message: 'Staff not found' });
+        }
+    } catch (err) {
+        console.error('Update Staff Error:', err);
+        res.status(500).json({ success: false, message: 'Error updating staff' });
+    }
+});
+
 // --- FEEDBACK APIs ---
 
 app.get('/api/feedback', async (req, res) => {
@@ -1361,6 +1407,138 @@ app.post('/api/feedback', async (req, res) => {
     } catch (err) {
         console.error("Feedback Error:", err);
         res.status(500).json({ success: false, message: "Feedback failed" });
+    }
+});
+
+// --- NOTIFICATIONS API (Dynamic) ---
+app.get('/api/notifications/:uid/:role', async (req, res) => {
+    try {
+        const { uid, role } = req.params;
+        let notifications = [];
+
+        if (role === 'admin' || role === 'manager' || role === 'receptionist') {
+            // Admin notifications: Pending bookings, Recent feedback
+            const pendingBookings = await Booking.find({ status: 'Pending' }).sort({ _id: -1 }).limit(5);
+            for (let b of pendingBookings) {
+                const customer = await Customer.findOne({ cid: b.cid });
+                notifications.push({
+                    id: `b-${b.bid}`,
+                    title: 'New Booking Request',
+                    message: `${customer ? customer.name : 'A customer'} requested a booking for ${new Date(b.date).toLocaleDateString()}`,
+                    time: b._id.getTimestamp(),
+                    type: 'booking'
+                });
+            }
+
+            const recentFeedback = await Feedback.find({}).sort({ date: -1 }).limit(5);
+            for (let f of recentFeedback) {
+                const customer = await Customer.findOne({ cid: f.cid });
+                notifications.push({
+                    id: `f-${f.fid}`,
+                    title: 'New Feedback Received',
+                    message: `${customer ? customer.name : 'A customer'} left new feedback`,
+                    time: f.date,
+                    type: 'feedback'
+                });
+            }
+        } else if (role === 'customer') {
+            const customer = await Customer.findOne({ uid: parseInt(uid) });
+            if (customer) {
+                const myBookings = await Booking.find({ cid: customer.cid }).sort({ _id: -1 }).limit(5);
+                for (let b of myBookings) {
+                    let msg = '';
+                    if (b.status === 'Pending') msg = `Your booking for ${new Date(b.date).toLocaleDateString()} is awaiting confirmation.`;
+                    else if (b.status === 'Confirmed') msg = `Your booking for ${new Date(b.date).toLocaleDateString()} is confirmed!`;
+                    else if (b.status === 'Completed') msg = `Your service on ${new Date(b.date).toLocaleDateString()} is completed.`;
+                    else msg = `Your booking status is: ${b.status}`;
+
+                    notifications.push({
+                        id: `b-${b.bid}`,
+                        title: `Booking ${b.status}`,
+                        message: msg,
+                        time: b._id.getTimestamp(),
+                        type: 'booking'
+                    });
+                }
+            }
+        }
+
+        // Sort combined notifications by time descending
+        notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
+        
+        res.json(notifications.slice(0, 10)); // return top 10
+    } catch (err) {
+        console.error("Notifications Error:", err);
+        res.status(500).json({ message: "Error fetching notifications" });
+    }
+});
+
+// --- INVOICE APIs ---
+app.get('/api/invoice/:pid', async (req, res) => {
+    try {
+        const pid = parseInt(req.params.pid);
+        const payment = await Payment.findOne({ pid });
+        if (!payment) return res.status(404).json({ success: false, message: "Payment not found" });
+
+        const booking = await Booking.findOne({ bid: payment.bid });
+        if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+        const customer = await Customer.findOne({ cid: booking.cid });
+        if (!customer) return res.status(404).json({ success: false, message: "Customer not found" });
+
+        const garage = await Garage.findOne({ gid: booking.gid });
+        if (!garage) return res.status(404).json({ success: false, message: "Garage not found" });
+
+        const bookedServices = await BookedService.find({ bid: booking.bid });
+        const servicesDetails = [];
+        for (const bs of bookedServices) {
+            const service = await Service.findOne({ sid: bs.sid });
+            if (service) {
+                servicesDetails.push({
+                    name: service.service_name,
+                    vehicle_type: service.vehicle_type,
+                    cost: bs.cost
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            invoice: {
+                payment: {
+                    pid: payment.pid,
+                    transaction_id: payment.transaction_id,
+                    amount: payment.amount,
+                    date: payment.date,
+                    status: payment.status,
+                    method: payment.payment_type
+                },
+                booking: {
+                    bid: booking.bid,
+                    date: booking.date,
+                    time: booking.time,
+                    status: booking.status
+                },
+                customer: {
+                    name: customer.name,
+                    email: customer.email,
+                    phone: customer.phone,
+                    address: customer.address
+                },
+                garage: {
+                    name: garage.g_name,
+                    owner: garage.owner_name,
+                    phone: garage.phone,
+                    email: garage.email,
+                    address: garage.address,
+                    pincode: garage.pincode
+                },
+                services: servicesDetails
+            }
+        });
+    } catch (err) {
+        console.error("Invoice Error:", err);
+        res.status(500).json({ success: false, message: "Error generating invoice data" });
     }
 });
 

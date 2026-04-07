@@ -35,6 +35,10 @@ export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+
+  const userRole = localStorage.getItem('userRole') || '';
 
   // Form State
   const [formData, setFormData] = useState({
@@ -45,7 +49,8 @@ export default function StaffPage() {
     email: '',
     salary: '',
     education: '',
-    address: ''
+    address: '',
+    is_active: true
   });
   const [errors, setErrors] = useState<any>({});
 
@@ -99,8 +104,11 @@ export default function StaffPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/staff', {
-        method: 'POST',
+      const url = isEditing ? `http://localhost:5000/api/staff/${editId}` : 'http://localhost:5000/api/staff';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
@@ -110,15 +118,40 @@ export default function StaffPage() {
         toast.success(data.message);
         setIsDialogOpen(false);
         fetchStaff();
-        setFormData({ firstName: '', lastName: '', role: '', phone: '', email: '', salary: '', education: '', address: '' });
+        resetForm();
       } else {
         toast.error(data.message);
       }
     } catch (err) {
-      toast.error("Failed to add staff");
+      toast.error(isEditing ? "Failed to update staff" : "Failed to add staff");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({ firstName: '', lastName: '', role: '', phone: '', email: '', salary: '', education: '', address: '', is_active: true });
+    setIsEditing(false);
+    setEditId(null);
+    setErrors({});
+  };
+
+  const handleEditClick = (staff: Staff) => {
+    setFormData({
+      firstName: staff.f_name,
+      lastName: staff.l_name,
+      role: staff.role,
+      phone: staff.phone,
+      email: staff.email,
+      salary: staff.salary.toString(),
+      education: staff.education || '',
+      address: staff.address || '',
+      is_active: staff.is_active
+    });
+    setEditId(staff.stfid);
+    setIsEditing(true);
+    setErrors({});
+    setIsDialogOpen(true);
   };
 
   const filteredStaff = staffList.filter(
@@ -141,7 +174,7 @@ export default function StaffPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="btn btn-primary" onClick={() => { setIsDialogOpen(true); setErrors({}); }}>
+        <button className="btn btn-primary" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
           <Plus style={{ width: '1rem', height: '1rem' }} />
           Add Staff
         </button>
@@ -178,6 +211,7 @@ export default function StaffPage() {
                   <th>Salary</th>
                   <th>Joined</th>
                   <th>Status</th>
+                  {['admin', 'manager'].includes(userRole) && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -191,6 +225,13 @@ export default function StaffPage() {
                     <td>₹{staff.salary.toLocaleString()}</td>
                     <td>{new Date(staff.join_date).toLocaleDateString()}</td>
                     <td><StatusBadge status={staff.is_active ? 'Active' : 'Inactive'} /></td>
+                    {['admin', 'manager'].includes(userRole) && (
+                      <td>
+                        <button className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => handleEditClick(staff)}>
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filteredStaff.length === 0 && (
@@ -204,13 +245,13 @@ export default function StaffPage() {
         </div>
       </div>
 
-      {/* Add Staff Dialog */}
+      {/* Add/Edit Staff Dialog */}
       {isDialogOpen && (
         <div className="modal-overlay" onClick={() => setIsDialogOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Add New Staff Member</h3>
-              <p className="modal-description">Enter details of the new staff member</p>
+              <h3 className="modal-title">{isEditing ? 'Edit Staff Member' : 'Add New Staff Member'}</h3>
+              <p className="modal-description">{isEditing ? 'Update staff details' : 'Enter details of the new staff member'}</p>
             </div>
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -263,11 +304,17 @@ export default function StaffPage() {
                 <input name="address" className={`input ${errors.address ? 'input-error' : ''}`} placeholder="Full address" value={formData.address} onChange={handleChange} />
                 {errors.address && <span style={{ color: 'var(--color-destructive)', fontSize: '0.8rem' }}>{errors.address}</span>}
               </div>
+              {isEditing && (
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                  <input type="checkbox" id="isActive" name="is_active" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} style={{ width: '1rem', height: '1rem' }} />
+                  <label htmlFor="isActive" className="label" style={{ marginBottom: 0, cursor: 'pointer' }}>Active Staff Member</label>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setIsDialogOpen(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? 'Adding...' : 'Add Staff'}
+                {isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update Staff' : 'Add Staff')}
               </button>
             </div>
           </div>

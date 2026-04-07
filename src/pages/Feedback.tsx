@@ -65,16 +65,18 @@ export default function FeedbackPage() {
               </div>
             </div>
             <p className="feedback-card-text">"{feedback.description}"</p>
-            <div className="feedback-card-actions">
-              <button className="btn btn-outline btn-sm">
-                <ThumbsUp style={{ width: '0.75rem', height: '0.75rem' }} />
-                Helpful
-              </button>
-              <button className="btn btn-outline btn-sm">
-                <MessageSquare style={{ width: '0.75rem', height: '0.75rem' }} />
-                Reply
-              </button>
-            </div>
+            {role !== 'admin' && role !== 'manager' && (
+              <div className="feedback-card-actions">
+                <button className="btn btn-outline btn-sm">
+                  <ThumbsUp style={{ width: '0.75rem', height: '0.75rem' }} />
+                  Helpful
+                </button>
+                <button className="btn btn-outline btn-sm">
+                  <MessageSquare style={{ width: '0.75rem', height: '0.75rem' }} />
+                  Reply
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {filteredFeedback.length === 0 && <p style={{ gridColumn: 'span 3', textAlign: 'center', color: 'var(--color-muted-foreground)' }}>No feedback found</p>}

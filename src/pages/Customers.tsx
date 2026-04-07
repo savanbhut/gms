@@ -15,7 +15,10 @@ export default function Customers() {
   useEffect(() => {
     fetch('http://localhost:5000/api/customers')
       .then(res => res.json())
-      .then(data => setCustomers(data))
+      .then(data => {
+        const sorted = Array.isArray(data) ? [...data].reverse() : [];
+        setCustomers(sorted);
+      })
       .catch(err => console.error(err));
 
     fetch('http://localhost:5000/api/bookings')

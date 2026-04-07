@@ -55,7 +55,13 @@ export default function Login() {
         toast.success(`Login successful as ${data.user.role}!`);
         navigate('/dashboard');
       } else {
-        setErrors({ general: data.message || 'Invalid Credentials' });
+        if (data.message === 'Username is invalid') {
+          setErrors({ email: 'Username is invalid' });
+        } else if (data.message === 'Password is invalid') {
+          setErrors({ password: 'Password is invalid' });
+        } else {
+          setErrors({ general: data.message || 'Invalid Credentials' });
+        }
       }
     } catch (error) {
       console.error('Login Error:', error);
@@ -155,7 +161,7 @@ export default function Login() {
                       color: 'var(--color-muted-foreground)'
                     }}
                   >
-                    {showPassword ? <EyeOff style={{ width: '1rem', height: '1rem' }} /> : <Eye style={{ width: '1rem', height: '1rem' }} />}
+                    {showPassword ? <Eye style={{ width: '1rem', height: '1rem' }} /> : <EyeOff style={{ width: '1rem', height: '1rem' }} />}
                   </button>
                 </div>
                 {errors.password && <span style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{errors.password}</span>}

@@ -78,8 +78,6 @@ export default function Bookings() {
   const statusCounts = {
     all: bookings.length,
     Pending: bookings.filter((b) => b.status === 'Pending').length,
-    'In Progress': bookings.filter((b) => b.status === 'In Progress').length,
-    Completed: bookings.filter((b) => b.status === 'Completed').length,
     Cancelled: bookings.filter((b) => b.status === 'Cancelled').length,
   };
 
@@ -87,7 +85,7 @@ export default function Bookings() {
     <DashboardLayout title="Bookings" subtitle="Manage service appointments">
       {/* Status Tabs */}
       <div className="filter-tabs">
-        {(['all', 'Pending', 'In Progress', 'Completed', 'Cancelled'] as const).map((status) => (
+        {(['all', 'Pending', 'Cancelled'] as const).map((status) => (
           <button
             key={status}
             className={`btn ${statusFilter === status ? 'btn-primary' : 'btn-outline'} btn-sm`}
